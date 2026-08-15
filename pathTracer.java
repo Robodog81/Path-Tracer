@@ -16,12 +16,20 @@ public class pathTracer extends JFrame {
     final int BOARDHEIGHT = 400;
     final int CELLSIZE = 1;
 
+    final int MAXRAYDISTANCE = 100;
+
     // Grid array: false = dead, true = alive
-    private Color[][] renderBuffer = new Color[BOARDWIDTH][BOARDHEIGHT];
+    Color[][] renderBuffer = new Color[BOARDWIDTH][BOARDHEIGHT];
+
+    int[][] sphereData = new int[4][1]; // x, y, z, and radius. 3 wide
+
+    int camX = 0;
+    int camY = 0;
+    int camZ = -60;
 
     private BufferedImage buffer;
     public pathTracer() {
-        setTitle("Game of Life");
+        setTitle("Path Tracer");
         setSize((BOARDHEIGHT * CELLSIZE) + 20, (BOARDWIDTH * CELLSIZE) + 60);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
@@ -40,6 +48,8 @@ public class pathTracer extends JFrame {
         menuBar.add(fileMenu);
 
         setJMenuBar(menuBar);
+
+        addSphere(0, 0, 0, 50, 0); // add a sphere at 0,0,0 with a radius of 10 at thr first slot
 
         // 2. Create the Custom Grid Panel
         renderPanel = new JPanel() {
@@ -80,11 +90,48 @@ public class pathTracer extends JFrame {
         tickLoop();
     }
 
+    public int sendRay(int startX, int startY, int startZ, int dirX, int dirY, int dirZ){
+        int rayX = startX;
+        int rayY = startY;
+        int rayZ = startZ;
+
+        double deltaX;
+        double deltaY;
+        double deltaZ;
+        double distanceFromSphere;
+
+        for (int i = 0; i < MAXRAYDISTANCE; i ++){
+            rayX += dirX;
+            rayY += dirY;
+            rayZ += dirZ;
+
+            deltaX = Math.pow(rayX - sphereData[0][0], 2);
+            deltaY = Math.pow(rayY - sphereData[1][0], 2);
+            deltaZ = Math.pow(rayZ - sphereData[2][0], 2);
+
+            distanceFromSphere = Math.sqrt(deltaX + deltaY + deltaZ);
+
+            if (Math.abs(distanceFromSphere) < sphereData[3][0]){
+                return i;
+            }
+        }
+        return MAXRAYDISTANCE;
+    }
+
+    public void addSphere(int x, int y, int z, int radius, int index){
+        sphereData[0][index] = x;
+        sphereData[1][index] = y;
+        sphereData[2][index] = z;
+        sphereData[3][index] = radius;
+    }
+
     public void tickLoop(){
         while (true){
             for (int y = 0; y < BOARDHEIGHT; y ++){
-                for (int x = 0; x < BOARDWIDTH; x ++){ 
-                    Color testColour = new Color(x / 2, y / 2, (int)Math.round(Math.random()*255));
+                for (int x = 0; x < BOARDWIDTH; x ++){
+                    //Color testColour = new Color(x / 2, y / 2, (int)Math.round(Math.random()*255));
+                    int value = sendRay(x - BOARDWIDTH / 2, y - BOARDHEIGHT / 2, camZ, 0, 0, 1) + (int)(Math.random()*50);
+                    Color testColour = new Color(value, value, value);
                     renderBuffer[x][y] = testColour;
                 }
             }
