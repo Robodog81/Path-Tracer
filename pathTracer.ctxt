@@ -10,6 +10,4 @@ comment4.params=x\ y\ z\ radius\ index
 comment4.target=void\ addSphere(int,\ int,\ int,\ int,\ int)
 comment5.params=
 comment5.target=void\ tickLoop()
-comment6.params=args
-comment6.target=void\ main(java.lang.String[])
-numComments=7
+numComments=6

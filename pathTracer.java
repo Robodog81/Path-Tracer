@@ -139,8 +139,8 @@ public class pathTracer extends JFrame {
         }
     }
 
-    public static void main(String[] args) {
+    //public static void main(String[] args) {
         // Run on the Event Dispatch Thread for thread safety
-        SwingUtilities.invokeLater(pathTracer::new);
-    }
+   //     SwingUtilities.invokeLater(pathTracer::new);
+    //}
 }
