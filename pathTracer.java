@@ -98,24 +98,22 @@ public class pathTracer extends JFrame {
         double deltaX;
         double deltaY;
         double deltaZ;
-        double distanceFromSphere;
 
-        for (int i = 0; i < MAXRAYDISTANCE; i ++){
-            rayX += dirX;
-            rayY += dirY;
-            rayZ += dirZ;
+        deltaX = sphereData[0][0] - startX; // minus xyz of the sphere
+        deltaY = sphereData[1][0] - startY;
+        deltaZ = sphereData[2][0] - startZ;
 
-            deltaX = Math.pow(rayX - sphereData[0][0], 2);
-            deltaY = Math.pow(rayY - sphereData[1][0], 2);
-            deltaZ = Math.pow(rayZ - sphereData[2][0], 2);
-
-            distanceFromSphere = Math.sqrt(deltaX + deltaY + deltaZ);
-
-            if (Math.abs(distanceFromSphere) < sphereData[3][0]){
-                return i;
-            }
-        }
-        return MAXRAYDISTANCE;
+        double tC = dot(deltaX, deltaY, deltaZ, dirX, dirY, dirZ);
+        
+        System.out.println(deltaX);
+        System.out.println(deltaY);
+        System.out.println(deltaZ);
+        System.out.println(tC);
+        return (int)tC;
+    }
+    
+    public double dot(double a1, double a2, double a3, double b1, double b2, double b3){
+        return (a1 * b1) + (a2 * b2) + (a3 * b3);
     }
 
     public void addSphere(int x, int y, int z, int radius, int index){
@@ -130,7 +128,7 @@ public class pathTracer extends JFrame {
             for (int y = 0; y < BOARDHEIGHT; y ++){
                 for (int x = 0; x < BOARDWIDTH; x ++){
                     //Color testColour = new Color(x / 2, y / 2, (int)Math.round(Math.random()*255));
-                    int value = sendRay(x - BOARDWIDTH / 2, y - BOARDHEIGHT / 2, camZ, 0, 0, 1) + (int)(Math.random()*50);
+                    int value = sendRay(x - BOARDWIDTH / 2, y - BOARDHEIGHT / 2, camZ, 0, 0, 1) + (int)(Math.random()*5);
                     Color testColour = new Color(value, value, value);
                     renderBuffer[x][y] = testColour;
                 }
@@ -140,7 +138,7 @@ public class pathTracer extends JFrame {
     }
 
     //public static void main(String[] args) {
-        // Run on the Event Dispatch Thread for thread safety
-   //     SwingUtilities.invokeLater(pathTracer::new);
+    // Run on the Event Dispatch Thread for thread safety
+    //     SwingUtilities.invokeLater(pathTracer::new);
     //}
 }
