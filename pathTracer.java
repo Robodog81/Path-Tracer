@@ -90,26 +90,53 @@ public class pathTracer extends JFrame {
         tickLoop();
     }
 
-    public int sendRay(int startX, int startY, int startZ, int dirX, int dirY, int dirZ){
-        int rayX = startX;
-        int rayY = startY;
-        int rayZ = startZ;
+    public double[] sendRay(int startX, int startY, int startZ, int dirX, int dirY, int dirZ){
+        int sphereX = sphereData[0][0];
+        int sphereY = sphereData[1][0];
+        int sphereZ = sphereData[2][0];
+        int sphereR = sphereData[3][0];
 
-        double deltaX;
-        double deltaY;
-        double deltaZ;
-
-        deltaX = sphereData[0][0] - startX; // minus xyz of the sphere
-        deltaY = sphereData[1][0] - startY;
-        deltaZ = sphereData[2][0] - startZ;
+        double deltaX = sphereX - startX; // minus xyz of the sphere
+        double deltaY = sphereY - startY;
+        double deltaZ = sphereZ - startZ;
+        
+        double[] collisionData = new double[4]; // stored as t1, normalx, normaly, normalz
+        
+        double length = Math.sqrt((deltaX * deltaX) + (deltaY * deltaY) + (deltaZ * deltaZ));
 
         double tC = dot(deltaX, deltaY, deltaZ, dirX, dirY, dirZ);
+        if (tC < 0){ // the ray isn't goint to hit the sphere, wrong dir
+            collisionData[0] = -1;
+            return collisionData;
+        }
         
-        System.out.println(deltaX);
-        System.out.println(deltaY);
-        System.out.println(deltaZ);
-        System.out.println(tC);
-        return (int)tC;
+        double d = Math.sqrt((length * length) - (tC * tC));
+        if (d > sphereR){ // the ray will miss the sphere
+            collisionData[0] = -1;
+            return collisionData;
+        }
+        
+        double t1C = Math.sqrt((sphereR * sphereR) - (d * d));
+        double t1 = tC - t1C;
+        double t2 = tC + t1C;
+        
+        // compute the normal of the hit
+        double hitX = startX + (dirX * t1);
+        double hitY = startY + (dirY * t1);
+        double hitZ = startZ + (dirZ * t1);
+        
+        double normalLength = Math.sqrt((hitX * hitX) + (hitY * hitY) + (hitZ * hitZ)); // normalise the normal vector
+        hitX /= normalLength;
+        hitY /= normalLength;
+        hitZ /= normalLength;
+        
+        collisionData[0] = t1;
+        collisionData[1] = hitX;
+        collisionData[2] = hitY;
+        collisionData[3] = hitZ;
+        //System.out.println(hitX);
+        
+        return collisionData;
     }
     
     public double dot(double a1, double a2, double a3, double b1, double b2, double b3){
@@ -128,9 +155,18 @@ public class pathTracer extends JFrame {
             for (int y = 0; y < BOARDHEIGHT; y ++){
                 for (int x = 0; x < BOARDWIDTH; x ++){
                     //Color testColour = new Color(x / 2, y / 2, (int)Math.round(Math.random()*255));
-                    int value = sendRay(x - BOARDWIDTH / 2, y - BOARDHEIGHT / 2, camZ, 0, 0, 1) + (int)(Math.random()*5);
-                    Color testColour = new Color(value, value, value);
-                    renderBuffer[x][y] = testColour;
+                    //int value = (int)sendRay(x - BOARDWIDTH / 2, y - BOARDHEIGHT / 2, camZ, 0, 0, 1)[0];
+                    
+                    double[] rayInfo = sendRay(x - BOARDWIDTH / 2, y - BOARDHEIGHT / 2, camZ, 0, 0, 1);
+                    int colourX = (int)(((rayInfo[1] + 1) / 2) * 255);
+                    int colourY = (int)(((rayInfo[2] + 1) / 2) * 255);
+                    int colourZ = (int)(((rayInfo[3] + 1) / 2) * 255);
+                    
+                    Color testColour = new Color(colourX, colourY, colourZ);
+                    if (rayInfo[0] > 0)
+                        renderBuffer[x][y] = testColour;
+                    else
+                        renderBuffer[x][y] = new Color((int)(Math.random()*255), (int)(Math.random()*255), (int)(Math.random()*255));
                 }
             }
             renderPanel.repaint();
