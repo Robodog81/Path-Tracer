@@ -26,6 +26,8 @@ public class pathTracer extends JFrame {
     int camX = 0;
     int camY = 0;
     int camZ = -60;
+    
+    float fOV = 50;
 
     private BufferedImage buffer;
     public pathTracer() {
@@ -90,7 +92,7 @@ public class pathTracer extends JFrame {
         tickLoop();
     }
 
-    public double[] sendRay(int startX, int startY, int startZ, int dirX, int dirY, int dirZ){
+    public double[] sendRay(int startX, int startY, int startZ, double dirX, double dirY, double dirZ){
         int sphereX = sphereData[0][0];
         int sphereY = sphereData[1][0];
         int sphereZ = sphereData[2][0];
@@ -134,7 +136,6 @@ public class pathTracer extends JFrame {
         collisionData[1] = hitX;
         collisionData[2] = hitY;
         collisionData[3] = hitZ;
-        //System.out.println(hitX);
         
         return collisionData;
     }
@@ -154,10 +155,16 @@ public class pathTracer extends JFrame {
         while (true){
             for (int y = 0; y < BOARDHEIGHT; y ++){
                 for (int x = 0; x < BOARDWIDTH; x ++){
-                    //Color testColour = new Color(x / 2, y / 2, (int)Math.round(Math.random()*255));
-                    //int value = (int)sendRay(x - BOARDWIDTH / 2, y - BOARDHEIGHT / 2, camZ, 0, 0, 1)[0];
+                    double sendX = x - BOARDWIDTH / 2;
+                    double sendY = y - BOARDHEIGHT / 2;
+                    double sendZ = fOV;
+                    double normalLength = Math.sqrt((sendX * sendX) + (sendY * sendY) + (sendZ * sendZ));
+                    sendX /= normalLength;
+                    sendY /= normalLength;
+                    sendZ /= normalLength;
+
+                    double[] rayInfo = sendRay(camX, camY, camZ, sendX, sendY, sendZ);
                     
-                    double[] rayInfo = sendRay(x - BOARDWIDTH / 2, y - BOARDHEIGHT / 2, camZ, 0, 0, 1);
                     int colourX = (int)(((rayInfo[1] + 1) / 2) * 255);
                     int colourY = (int)(((rayInfo[2] + 1) / 2) * 255);
                     int colourZ = (int)(((rayInfo[3] + 1) / 2) * 255);
@@ -166,15 +173,16 @@ public class pathTracer extends JFrame {
                     if (rayInfo[0] > 0)
                         renderBuffer[x][y] = testColour;
                     else
-                        renderBuffer[x][y] = new Color((int)(Math.random()*255), (int)(Math.random()*255), (int)(Math.random()*255));
+                        renderBuffer[x][y] = getBackGround(sendY);
                 }
             }
             renderPanel.repaint();
         }
     }
-
-    //public static void main(String[] args) {
-    // Run on the Event Dispatch Thread for thread safety
-    //     SwingUtilities.invokeLater(pathTracer::new);
-    //}
+    
+    public Color getBackGround(double yIn){
+        double blend = (yIn / 4) + 0.75;
+        
+        return new Color((int)(255 * blend), (int)(255 * blend), 255);
+    }
 }
