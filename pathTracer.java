@@ -12,8 +12,8 @@ import java.awt.image.BufferedImage;
 public class pathTracer extends JFrame {
     JPanel renderPanel;
 
-    final int BOARDWIDTH = 400;
-    final int BOARDHEIGHT = 400;
+    final int BOARDWIDTH = 500;
+    final int BOARDHEIGHT = 500;
     final int CELLSIZE = 1;
 
     final int MAXRAYDISTANCE = 100;
@@ -21,23 +21,24 @@ public class pathTracer extends JFrame {
     // Grid array: false = dead, true = alive
     Color[][] renderBuffer = new Color[BOARDWIDTH][BOARDHEIGHT];
 
-    int[][] sphereData = new int[4][1]; // x, y, z, and radius. 3 wide
+    final int SPHEREAMT = 10;
+    int[][] sphereData = new int[4][SPHEREAMT]; // x, y, z, and radius. 4 wide, 2 spheres
 
     int camX = 0;
-    int camY = 0;
-    int camZ = -60;
-    
-    float fOV = 50;
+    int camY = -20;
+    int camZ = -50;
+
+    float fOV = 200;
 
     private BufferedImage buffer;
     public pathTracer() {
         setTitle("Path Tracer");
-        setSize((BOARDHEIGHT * CELLSIZE) + 20, (BOARDWIDTH * CELLSIZE) + 60);
+        setSize((BOARDWIDTH * CELLSIZE) + 20, (BOARDHEIGHT * CELLSIZE) + 60);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
         // 1. Create and Set the Menu Bar
-        JMenuBar menuBar = new JMenuBar();
+        /*JMenuBar menuBar = new JMenuBar();
         JMenu fileMenu = new JMenu("File");
         JMenuItem startItem = new JMenuItem("Start");
         JMenuItem pauseItem = new JMenuItem("Pause");
@@ -49,9 +50,13 @@ public class pathTracer extends JFrame {
         fileMenu.add(resetItem);
         menuBar.add(fileMenu);
 
-        setJMenuBar(menuBar);
-
-        addSphere(0, 0, 0, 50, 0); // add a sphere at 0,0,0 with a radius of 10 at thr first slot
+        setJMenuBar(menuBar);*/
+        
+        for (int i = 0; i < SPHEREAMT; i++){
+            addSphere((int)(Math.random() * 400) - 200, (int)(Math.random() * 400) - 200, (int)(Math.random() * 400) - 200, (int)(Math.random() * 100), i);
+        }
+        //addSphere(0, -30, 0, 30, 0); // add a sphere at 0,0,0 with a radius of 10 at the first slot
+        //addSphere(0, 500, 0, 500, 1);
 
         // 2. Create the Custom Grid Panel
         renderPanel = new JPanel() {
@@ -93,53 +98,57 @@ public class pathTracer extends JFrame {
     }
 
     public double[] sendRay(int startX, int startY, int startZ, double dirX, double dirY, double dirZ){
-        int sphereX = sphereData[0][0];
-        int sphereY = sphereData[1][0];
-        int sphereZ = sphereData[2][0];
-        int sphereR = sphereData[3][0];
-
-        double deltaX = sphereX - startX; // minus xyz of the sphere
-        double deltaY = sphereY - startY;
-        double deltaZ = sphereZ - startZ;
-        
         double[] collisionData = new double[4]; // stored as t1, normalx, normaly, normalz
-        
-        double length = Math.sqrt((deltaX * deltaX) + (deltaY * deltaY) + (deltaZ * deltaZ));
+        double clostestDistance = 99999;
+        collisionData[0] = -1;
+        collisionData[1] = 0;
+        collisionData[2] = 0;
+        collisionData[3] = 0;
+        for (int i = 0; i < SPHEREAMT; i++){
+            int sphereX = sphereData[0][i];
+            int sphereY = sphereData[1][i];
+            int sphereZ = sphereData[2][i];
+            int sphereR = sphereData[3][i];
 
-        double tC = dot(deltaX, deltaY, deltaZ, dirX, dirY, dirZ);
-        if (tC < 0){ // the ray isn't goint to hit the sphere, wrong dir
-            collisionData[0] = -1;
-            return collisionData;
+            double deltaX = sphereX - startX; // minus xyz of the sphere
+            double deltaY = sphereY - startY;
+            double deltaZ = sphereZ - startZ;
+
+            double length = Math.sqrt((deltaX * deltaX) + (deltaY * deltaY) + (deltaZ * deltaZ));
+
+            double tC = dot(deltaX, deltaY, deltaZ, dirX, dirY, dirZ);
+            if (!(tC < 0)){ // the ray isn't goint to hit the sphere, wrong dir
+                double d = Math.sqrt((length * length) - (tC * tC));
+                if (!(d > sphereR)){ // the ray will miss the sphere
+                    // compute the ray intersect points
+                    double t1C = Math.sqrt((sphereR * sphereR) - (d * d));
+                    double t1 = tC - t1C;
+                    double t2 = tC + t1C;
+                    if (t1 < clostestDistance){
+                        clostestDistance = t1;
+
+                        // compute the normal of the hit
+                        double hitX = startX + (dirX * t1) - sphereX;
+                        double hitY = startY + (dirY * t1) - sphereY;
+                        double hitZ = startZ + (dirZ * t1) - sphereZ;
+
+                        // can devide by sphere radius
+                        double normalLength = Math.sqrt((hitX * hitX) + (hitY * hitY) + (hitZ * hitZ)); // normalise the normal vector
+                        hitX /= normalLength;
+                        hitY /= normalLength;
+                        hitZ /= normalLength;
+
+                        collisionData[0] = t1;
+                        collisionData[1] = hitX;
+                        collisionData[2] = hitY;
+                        collisionData[3] = hitZ;
+                    }
+                }
+            }
         }
-        
-        double d = Math.sqrt((length * length) - (tC * tC));
-        if (d > sphereR){ // the ray will miss the sphere
-            collisionData[0] = -1;
-            return collisionData;
-        }
-        
-        double t1C = Math.sqrt((sphereR * sphereR) - (d * d));
-        double t1 = tC - t1C;
-        double t2 = tC + t1C;
-        
-        // compute the normal of the hit
-        double hitX = startX + (dirX * t1);
-        double hitY = startY + (dirY * t1);
-        double hitZ = startZ + (dirZ * t1);
-        
-        double normalLength = Math.sqrt((hitX * hitX) + (hitY * hitY) + (hitZ * hitZ)); // normalise the normal vector
-        hitX /= normalLength;
-        hitY /= normalLength;
-        hitZ /= normalLength;
-        
-        collisionData[0] = t1;
-        collisionData[1] = hitX;
-        collisionData[2] = hitY;
-        collisionData[3] = hitZ;
-        
         return collisionData;
     }
-    
+
     public double dot(double a1, double a2, double a3, double b1, double b2, double b3){
         return (a1 * b1) + (a2 * b2) + (a3 * b3);
     }
@@ -164,11 +173,11 @@ public class pathTracer extends JFrame {
                     sendZ /= normalLength;
 
                     double[] rayInfo = sendRay(camX, camY, camZ, sendX, sendY, sendZ);
-                    
+
                     int colourX = (int)(((rayInfo[1] + 1) / 2) * 255);
                     int colourY = (int)(((rayInfo[2] + 1) / 2) * 255);
                     int colourZ = (int)(((rayInfo[3] + 1) / 2) * 255);
-                    
+
                     Color testColour = new Color(colourX, colourY, colourZ);
                     if (rayInfo[0] > 0)
                         renderBuffer[x][y] = testColour;
@@ -177,12 +186,13 @@ public class pathTracer extends JFrame {
                 }
             }
             renderPanel.repaint();
+            camZ --;
         }
     }
-    
+
     public Color getBackGround(double yIn){
         double blend = (yIn / 4) + 0.75;
-        
+
         return new Color((int)(255 * blend), (int)(255 * blend), 255);
     }
 }
