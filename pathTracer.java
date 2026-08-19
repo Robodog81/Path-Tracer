@@ -124,7 +124,7 @@ public class pathTracer extends JFrame {
                     double t1C = Math.sqrt((sphereR * sphereR) - (d * d));
                     double t1 = tC - t1C;
                     double t2 = tC + t1C;
-                    if (t1 < clostestDistance){
+                    if (t1 < clostestDistance){ // this code runs once the ray has found the sphere it will hit
                         clostestDistance = t1;
 
                         // compute the normal of the hit
@@ -142,6 +142,10 @@ public class pathTracer extends JFrame {
                         collisionData[1] = hitX;
                         collisionData[2] = hitY;
                         collisionData[3] = hitZ;
+                        
+                        // reflection: v - 2*dot(v,n)*n
+                        
+                                                
                     }
                 }
             }
