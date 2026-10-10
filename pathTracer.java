@@ -22,7 +22,7 @@ public class pathTracer extends JFrame {
     Color[][] renderBuffer = new Color[BOARDWIDTH][BOARDHEIGHT];
 
     final int SPHEREAMT = 10;
-    int[][] sphereData = new int[4][SPHEREAMT]; // x, y, z, and radius. 4 wide, 2 spheres
+    int[][] sphereData = new int[7][SPHEREAMT]; // x, y, z, radius, r, g, b. (7 wide, spheres)
 
     int camX = 0;
     int camY = -20;
@@ -53,7 +53,14 @@ public class pathTracer extends JFrame {
         setJMenuBar(menuBar);*/
         
         for (int i = 0; i < SPHEREAMT; i++){
-            addSphere((int)(Math.random() * 400) - 200, (int)(Math.random() * 400) - 200, (int)(Math.random() * 400) - 200, (int)(Math.random() * 100), i);
+            addSphere((int)(Math.random() * 400) - 200,
+                      (int)(Math.random() * 400) - 200,
+                      (int)(Math.random() * 400) - 200, 
+                      (int)(Math.random() * 100),
+                      (int)(Math.random() * 255),
+                      (int)(Math.random() * 255),
+                      (int)(Math.random() * 255),
+                      i);
         }
         //addSphere(0, -30, 0, 30, 0); // add a sphere at 0,0,0 with a radius of 10 at the first slot
         //addSphere(0, 500, 0, 500, 1);
@@ -97,18 +104,19 @@ public class pathTracer extends JFrame {
         tickLoop();
     }
 
-    public double[] sendRay(int startX, int startY, int startZ, double dirX, double dirY, double dirZ){
-        double[] collisionData = new double[4]; // stored as t1, normalx, normaly, normalz
+    public double[] sendIndividualRay(int startX, int startY, int startZ, double dirX, double dirY, double dirZ){
+        double[] collisionData = new double[5]; // stored as t1, normalx, normaly, normalz, collision index
         double clostestDistance = 99999;
-        collisionData[0] = -1;
-        collisionData[1] = 0;
+        collisionData[0] = -1; // distance to collision, -1 is ignored
+        collisionData[1] = 0; // surface normal
         collisionData[2] = 0;
         collisionData[3] = 0;
+        collisionData[4] = -1;
         for (int i = 0; i < SPHEREAMT; i++){
             int sphereX = sphereData[0][i];
             int sphereY = sphereData[1][i];
             int sphereZ = sphereData[2][i];
-            int sphereR = sphereData[3][i];
+            int sphereRadius = sphereData[3][i];
 
             double deltaX = sphereX - startX; // minus xyz of the sphere
             double deltaY = sphereY - startY;
@@ -119,12 +127,13 @@ public class pathTracer extends JFrame {
             double tC = dot(deltaX, deltaY, deltaZ, dirX, dirY, dirZ);
             if (!(tC < 0)){ // the ray isn't goint to hit the sphere, wrong dir
                 double d = Math.sqrt((length * length) - (tC * tC));
-                if (!(d > sphereR)){ // the ray will miss the sphere
+                if (!(d > sphereRadius)){ // if the ray will hit the sphere
                     // compute the ray intersect points
-                    double t1C = Math.sqrt((sphereR * sphereR) - (d * d));
+                    double t1C = Math.sqrt((sphereRadius * sphereRadius) - (d * d));
                     double t1 = tC - t1C;
                     double t2 = tC + t1C;
-                    if (t1 < clostestDistance){ // this code runs once the ray has found the sphere it will hit
+                    if (t1 < clostestDistance){ // this code runs if the new collision is better (closer) tan all previous hits.
+                        // at the end of the loop the clostest collision is left occupying the caribles
                         clostestDistance = t1;
 
                         // compute the normal of the hit
@@ -142,10 +151,9 @@ public class pathTracer extends JFrame {
                         collisionData[1] = hitX;
                         collisionData[2] = hitY;
                         collisionData[3] = hitZ;
+                        collisionData[4] = i;
                         
                         // reflection: v - 2*dot(v,n)*n
-                        
-                                                
                     }
                 }
             }
@@ -157,11 +165,14 @@ public class pathTracer extends JFrame {
         return (a1 * b1) + (a2 * b2) + (a3 * b3);
     }
 
-    public void addSphere(int x, int y, int z, int radius, int index){
+    public void addSphere(int x, int y, int z, int radius, int r, int g, int b, int index){
         sphereData[0][index] = x;
         sphereData[1][index] = y;
         sphereData[2][index] = z;
         sphereData[3][index] = radius;
+        sphereData[4][index] = r;
+        sphereData[5][index] = g;
+        sphereData[6][index] = b;
     }
 
     public void tickLoop(){
@@ -176,8 +187,9 @@ public class pathTracer extends JFrame {
                     sendY /= normalLength;
                     sendZ /= normalLength;
 
-                    double[] rayInfo = sendRay(camX, camY, camZ, sendX, sendY, sendZ);
+                    trace(camX, camY, camZ, sendX, sendY, sendZ);
 
+                    double[] rayInfo = trace(camX, camY, camZ, sendX, sendY, sendZ);
                     int colourX = (int)(((rayInfo[1] + 1) / 2) * 255);
                     int colourY = (int)(((rayInfo[2] + 1) / 2) * 255);
                     int colourZ = (int)(((rayInfo[3] + 1) / 2) * 255);
@@ -192,6 +204,12 @@ public class pathTracer extends JFrame {
             renderPanel.repaint();
             camZ --;
         }
+    }
+
+    public double[] trace(int startX, int startY, int startZ, double dirX, double dirY, double dirZ){
+        double[] initalRay = sendIndividualRay(startX, startY, startZ, dirX, dirY, dirZ);
+
+        return initalRay;
     }
 
     public Color getBackGround(double yIn){
