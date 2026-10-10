@@ -1,6 +1,6 @@
 #BlueJ package file
 dependency1.from=Main
-dependency1.to=test
+dependency1.to=pathTracer
 dependency1.type=UsesDependency
 editor.fx.0.height=1080
 editor.fx.0.width=1920

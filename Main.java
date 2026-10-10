@@ -7,7 +7,7 @@
  */
 public class Main
 {
-    public Main(){
-        new test();
+    public static void main(String[] args) {
+        new pathTracer();
     }
 }
