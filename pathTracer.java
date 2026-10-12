@@ -17,12 +17,12 @@ public class pathTracer extends JFrame {
     final int BOARDWIDTH = 1920 / 4;
     final int BOARDHEIGHT = 1080 / 4;
     final int CELLSIZE = 1;
-
-    final int MAXRAYDISTANCE = 100;
+    final boolean ANTIALIASING = true;
+    int toneMapType = 2;
 
     double[][][] frameBuffer = new double[BOARDWIDTH][BOARDHEIGHT][3];
 
-    final int SPHEREAMT = 10;
+    final int SPHEREAMT = 17;
     double[][] sphereData = new double[10][SPHEREAMT]; // x, y, z, radius, r, g, b, emition r g b (10 wide, spheres)
 
     int camX = 0;
@@ -76,9 +76,6 @@ public class pathTracer extends JFrame {
                     brightness,
                     i);
         }
-        // addSphere(0, -30, 0, 30, 0); // add a sphere at 0,0,0 with a radius of 10 at
-        // the first slot
-        // addSphere(0, 500, 0, 500, 1);
 
         // 2. Create the Custom Grid Panel
         renderPanel = new JPanel() {
@@ -97,8 +94,11 @@ public class pathTracer extends JFrame {
                 // Draw cells
                 for (int y = 0; y < BOARDHEIGHT; y++) { // display the grid
                     for (int x = 0; x < BOARDWIDTH; x++) {
-                        Color renderColor = new Color((float) frameBuffer[x][y][0], (float) frameBuffer[x][y][1],
-                                (float) frameBuffer[x][y][2]);
+
+                        double[] renderPixel = toneMap(frameBuffer[x][y]);
+
+                        Color renderColor = new Color((float) renderPixel[0], (float) renderPixel[1],
+                                (float) renderPixel[2]);
                         buffer.setRGB(x, y, renderColor.getRGB()); // render the cell as a single pixel
                     }
                 }
@@ -123,11 +123,135 @@ public class pathTracer extends JFrame {
         tickLoop();
     }
 
-    public double[] sendIndividualRay(double startX, double startY, double startZ, double dirX, double dirY, double dirZ) {
+    public double[] toneMap(double[] colour) {
+        double[] result = new double[3];
+        if (toneMapType == 1) {
+            for (int i = 0; i < 3; i++) {
+                result[i] = (colour[i] / 255) / ((colour[i] / 255) + 1);
+            }
+        } else if (toneMapType == 2) {
+            for (int i = 0; i < 3; i++) {
+                result[i] = clamp(colour[i], 0, 255);
+                result[i] /= 255;
+            }
+        }
+        return result;
+
+    }
+
+    public void tickLoop() {
+        while (true) {
+            for (int y = 0; y < BOARDHEIGHT; y++) {
+                for (int x = 0; x < BOARDWIDTH; x++) {
+                    double[] rawPixelColour = getPixelColour(x, y);
+
+                    if (frameNumber == 1) {
+                        frameBuffer[x][y] = rawPixelColour;
+                    } else {
+                        frameBuffer[x][y][0] = frameBuffer[x][y][0]
+                                + ((rawPixelColour[0] - frameBuffer[x][y][0]) / (frameNumber));
+                        frameBuffer[x][y][1] = frameBuffer[x][y][1]
+                                + ((rawPixelColour[1] - frameBuffer[x][y][1]) / (frameNumber));
+                        frameBuffer[x][y][2] = frameBuffer[x][y][2]
+                                + ((rawPixelColour[2] - frameBuffer[x][y][2]) / (frameNumber));
+                    }
+                }
+            }
+            frameNumber++;
+            renderPanel.repaint();
+            // camZ--;
+        }
+    }
+
+    public double[] getPixelColour(int x, int y) {
+        double sendX = x - BOARDWIDTH / 2;
+        // the ray is sent from the camera to the pixel on the screen, this is the
+        // direction of the ray
+        double sendY = y - BOARDHEIGHT / 2;
+        double sendZ = fOV;
+        double normalLength = Math.sqrt((sendX * sendX) + (sendY * sendY) + (sendZ * sendZ));
+
+        sendX /= normalLength;
+        sendY /= normalLength;
+        sendZ /= normalLength;
+
+        return tracePixel(camX, camY, camZ, sendX, sendY, sendZ);
+    }
+
+    public double[] tracePixel(double startX, double startY, double startZ, double dirX, double dirY, double dirZ) {
+        // caculates the pixel colour by sending and bouncing rays
+
+        double rand1 = 0;
+        double rand2 = 0;
+        if (ANTIALIASING) {
+            rand1 = Math.random() - 0.5; // anti aliasing, offset the inital ray by a random amount, half a pixel
+            rand2 = Math.random() - 0.5; // in either direction
+        }
+        double[] rayPos = new double[] { startX + rand1, startY + rand2, startZ };
+        double[] rayDir = new double[] { dirX, dirY, dirZ };
+
+        float[] rayColor = new float[] { 1, 1, 1 };
+        float[] incomingLight = new float[] { 0, 0, 0 };
+
+        for (int i = 0; i < 5; i++) { // bounces the ray multiple times
+
+            double[] nextRay = sendIndividualRay(rayPos[0], rayPos[1], rayPos[2],
+                    rayDir[0], rayDir[1], rayDir[2]);
+            double distance = nextRay[0];
+
+            if (distance > 0) { // if the ray hit a sphere, caculate the new ray position and direction
+                double randVec[] = randomBounceVector();
+
+                if (dot(randVec[0], randVec[1], randVec[2], nextRay[1], nextRay[2], nextRay[3]) < 0) {
+                    // if the random vector is facing into the sphere invert it
+                    randVec[0] *= -1;
+                    randVec[1] *= -1;
+                    randVec[2] *= -1;
+                }
+
+                rayPos = new double[] { rayDir[0] * distance + rayPos[0], rayDir[1] * distance + rayPos[1],
+                        rayDir[2] * distance + rayPos[2] };
+                if (Math.random() > 0) {
+                    rayDir = new double[] { randVec[0], randVec[1], randVec[2] };
+                } else {
+
+                    // reflection
+
+                    double dot = dot(rayDir[0], rayDir[1], rayDir[2], nextRay[1], nextRay[2],
+                            nextRay[3]);
+                    rayDir[0] = rayDir[0] - 2 * dot * nextRay[1];
+                    rayDir[1] = rayDir[1] - 2 * dot * nextRay[2];
+                    rayDir[2] = rayDir[2] - 2 * dot * nextRay[3];
+
+                }
+
+                incomingLight[0] += sphereData[7][(int) nextRay[4]] * rayColor[0];
+                incomingLight[1] += sphereData[8][(int) nextRay[4]] * rayColor[1];
+                incomingLight[2] += sphereData[9][(int) nextRay[4]] * rayColor[2];
+
+                rayColor[0] *= sphereData[4][(int) nextRay[4]];
+                rayColor[1] *= sphereData[5][(int) nextRay[4]];
+                rayColor[2] *= sphereData[6][(int) nextRay[4]];
+
+            } else {
+                double[] bgColour = getBackGround(rayDir[1]);
+                incomingLight[0] += bgColour[0] * rayColor[0];
+                incomingLight[1] += bgColour[1] * rayColor[1];
+                incomingLight[2] += bgColour[2] * rayColor[2];
+
+                return new double[] { incomingLight[0], incomingLight[1], incomingLight[2] };
+            }
+        }
+        return new double[] { incomingLight[0], incomingLight[1], incomingLight[2] };
+
+    }
+
+    public double[] sendIndividualRay(double startX, double startY, double startZ, double dirX, double dirY,
+            double dirZ) {
         // returns an array of doubles, the first is the distance of the collision, the
         // normal, then the index of the sphere that was hit
         double[] collisionData = new double[5]; // stored as t1, normalx, normaly, normalz, collision index
-        double clostestDistance = 99999;
+        double clostestDistance = 999999999; // a big number, any collision distancewill be favoured over it
         collisionData[0] = -1; // distance to collision, -1 is ignored
         collisionData[1] = 0; // surface normal
         collisionData[2] = 0; // surface normal
@@ -175,8 +299,6 @@ public class pathTracer extends JFrame {
                         collisionData[2] = hitY;
                         collisionData[3] = hitZ;
                         collisionData[4] = i;
-
-                        // reflection: v - 2*dot(v,n)*n
                     }
                 }
             }
@@ -202,33 +324,6 @@ public class pathTracer extends JFrame {
         sphereData[9][index] = emmitB; // emmited light b
     }
 
-    public void tickLoop() {
-        while (true) {
-            for (int y = 0; y < BOARDHEIGHT; y++) {
-                for (int x = 0; x < BOARDWIDTH; x++) {
-                    double[] rawPixelColour = getPixelColour(x, y);
-                    for (int i = 0; i < 3; i++) {
-                        rawPixelColour[i] = clamp(rawPixelColour[i] / 255, 0, 1);
-                    }
-
-                    if (frameNumber == 1) {
-                        frameBuffer[x][y] = rawPixelColour;
-                    } else {
-                        frameBuffer[x][y][0] = frameBuffer[x][y][0]
-                                + ((rawPixelColour[0] - frameBuffer[x][y][0]) / (frameNumber));
-                        frameBuffer[x][y][1] = frameBuffer[x][y][1]
-                                + ((rawPixelColour[1] - frameBuffer[x][y][1]) / (frameNumber));
-                        frameBuffer[x][y][2] = frameBuffer[x][y][2]
-                                + ((rawPixelColour[2] - frameBuffer[x][y][2]) / (frameNumber));
-                    }
-                }
-            }
-            frameNumber++;
-            renderPanel.repaint();
-            // camZ--;
-        }
-    }
-
     public double clamp(double input, double min, double max) {
         double result = input;
         if (result < min)
@@ -236,74 +331,6 @@ public class pathTracer extends JFrame {
         if (result > max)
             result = max;
         return result;
-    }
-
-    public double[] getPixelColour(int x, int y) {
-        double sendX = x - BOARDWIDTH / 2;
-        // the ray is sent from the camera to the pixel on the screen, this is the
-        // direction of the ray
-        double sendY = y - BOARDHEIGHT / 2;
-        double sendZ = fOV;
-        double normalLength = Math.sqrt((sendX * sendX) + (sendY * sendY) + (sendZ * sendZ));
-
-        sendX /= normalLength;
-        sendY /= normalLength;
-        sendZ /= normalLength;
-
-        return tracePixel(camX, camY, camZ, sendX, sendY, sendZ);
-    }
-
-    public double[] tracePixel(double startX, double startY, double startZ, double dirX, double dirY, double dirZ) {
-        // caculates the pixel colour by sending and bouncing rays
-
-        // double[] initalRay = sendIndividualRay(startX, startY, startZ, dirX, dirY,
-        // dirZ);
-
-        double[] rayPos = new double[] { startX, startY, startZ };
-        double[] rayDir = new double[] { dirX, dirY, dirZ };
-
-        float[] rayColor = new float[] { 1, 1, 1 };
-        float[] incomingLight = new float[] { 0, 0, 0 };
-
-        for (int i = 0; i < 5; i++) { // bounces the ray multiple times
-            // System.out.println("Bounce: " + i);
-
-            double[] nextRay = sendIndividualRay(rayPos[0], rayPos[1], rayPos[2], rayDir[0],
-                    rayDir[1], rayDir[2]);
-            double distance = nextRay[0];
-
-            if (distance > 0) { // if the ray hit a sphere, caculate the new ray position and direction
-                double randVec[] = randomBounceVector();
-
-                if (dot(randVec[0], randVec[1], randVec[2], nextRay[1], nextRay[2], nextRay[3]) < 0) {
-                    // if the random vector is facing into the sphere invert it
-                    randVec[0] *= -1;
-                    randVec[1] *= -1;
-                    randVec[2] *= -1;
-                }
-
-                rayPos = new double[] { rayDir[0] * distance + rayPos[0], rayDir[1] * distance + rayPos[1],
-                        rayDir[2] * distance + rayPos[2] };
-                rayDir = new double[] { randVec[0], randVec[1], randVec[2] };
-
-                incomingLight[0] += sphereData[7][(int) nextRay[4]] * rayColor[0];
-                incomingLight[1] += sphereData[8][(int) nextRay[4]] * rayColor[1];
-                incomingLight[2] += sphereData[9][(int) nextRay[4]] * rayColor[2];
-
-                rayColor[0] *= sphereData[4][(int) nextRay[4]];
-                rayColor[1] *= sphereData[5][(int) nextRay[4]];
-                rayColor[2] *= sphereData[6][(int) nextRay[4]];
-
-            } else {
-                double[] bgColour = getBackGround(rayDir[1]);
-                incomingLight[0] += bgColour[0] * rayColor[0];
-                incomingLight[1] += bgColour[1] * rayColor[1];
-                incomingLight[2] += bgColour[2] * rayColor[2];
-
-                return new double[] { incomingLight[0], incomingLight[1], incomingLight[2] };
-            }
-        }
-        return new double[] { incomingLight[0], incomingLight[1], incomingLight[2] };
     }
 
     public double[] randomBounceVector() {
@@ -328,6 +355,6 @@ public class pathTracer extends JFrame {
                                                 // make a sky gradient
         double blend = (yIn / 4) + 0.75;
 
-        return new double[] { blend * 60, blend * 60, 60 };
+        return new double[] { blend * 255, blend * 255, 255 };
     }
 }
