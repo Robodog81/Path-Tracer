@@ -10,15 +10,19 @@
 import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class pathTracer extends JFrame {
     JPanel renderPanel;
 
-    final int BOARDWIDTH = 1920 / 4;
-    final int BOARDHEIGHT = 1080 / 4;
+    final int BOARDWIDTH = 1920 / 1;
+    final int BOARDHEIGHT = 1080 / 1;
     final int CELLSIZE = 1;
-    final boolean ANTIALIASING = true;
-    int toneMapType = 2;
+    final boolean ANTIALIASING = false;
+    final int THREADAMT = 8;
+    int toneMapType = 2; // only not a final because vs code hilights the alternative map as unused code
 
     double[][][] frameBuffer = new double[BOARDWIDTH][BOARDHEIGHT][3];
 
@@ -32,6 +36,8 @@ public class pathTracer extends JFrame {
     double fOV = 200;
 
     int frameNumber = 1;
+
+    boolean[] threadSync = new boolean[3];
 
     private BufferedImage buffer;
 
@@ -111,6 +117,9 @@ public class pathTracer extends JFrame {
                 int screenWidth = getWidth();
                 int screenHeight = getHeight();
                 g.drawImage(buffer, 0, 0, screenWidth, screenHeight, null); // put the buffer onto the screen
+                Font customFont = new Font("Arial", Font.BOLD, 18);
+                g.setFont(customFont);
+                g.drawString("Frame: " + frameNumber, 20, 30);
             }
         };
 
@@ -140,11 +149,38 @@ public class pathTracer extends JFrame {
     }
 
     public void tickLoop() {
+        Thread[] allThreads = new Thread[THREADAMT];
         while (true) {
-            for (int y = 0; y < BOARDHEIGHT; y++) {
-                for (int x = 0; x < BOARDWIDTH; x++) {
-                    double[] rawPixelColour = getPixelColour(x, y);
 
+            for (int i = 0; i < THREADAMT; i++) {
+                int startArea = i;
+                allThreads[i] = new Thread(() -> {
+                    renderChunk(startArea);
+                });
+                allThreads[i].start();
+            }
+
+            try { // wait for the threads to finish runing
+                for (int i = 0; i < allThreads.length; i++) {
+                    allThreads[i].join();
+                }
+            } catch (InterruptedException e) {
+                System.err.println("Thread Could Not Join: " + e.getMessage());
+                Thread.currentThread().interrupt(); // Restore interrupted status
+                break; // Exit loop if interrupted
+            }
+            frameNumber++;
+
+        }
+    }
+
+    public void renderChunk(int startArea) {
+        int chunkSize = BOARDHEIGHT / THREADAMT;
+        int startY = chunkSize * startArea;
+        for (int y = startY; y < startY + chunkSize; y++) {
+            for (int x = 0; x < BOARDWIDTH; x++) {
+                double[] rawPixelColour = getPixelColour(x, y);
+                //if (startY == 0) {
                     if (frameNumber == 1) {
                         frameBuffer[x][y] = rawPixelColour;
                     } else {
@@ -155,12 +191,11 @@ public class pathTracer extends JFrame {
                         frameBuffer[x][y][2] = frameBuffer[x][y][2]
                                 + ((rawPixelColour[2] - frameBuffer[x][y][2]) / (frameNumber));
                     }
-                }
+                //}
+
             }
-            frameNumber++;
-            renderPanel.repaint();
-            // camZ--;
         }
+        renderPanel.repaint();
     }
 
     public double[] getPixelColour(int x, int y) {
@@ -184,8 +219,8 @@ public class pathTracer extends JFrame {
         double rand1 = 0;
         double rand2 = 0;
         if (ANTIALIASING) {
-            rand1 = Math.random() - 0.5; // anti aliasing, offset the inital ray by a random amount, half a pixel
-            rand2 = Math.random() - 0.5; // in either direction
+            rand1 = ThreadLocalRandom.current().nextDouble() - 0.5; // anti aliasing, offset the inital ray by a random amount, half a pixel
+            rand2 = ThreadLocalRandom.current().nextDouble() - 0.5; // in either direction
         }
         double[] rayPos = new double[] { startX + rand1, startY + rand2, startZ };
         double[] rayDir = new double[] { dirX, dirY, dirZ };
@@ -211,7 +246,8 @@ public class pathTracer extends JFrame {
 
                 rayPos = new double[] { rayDir[0] * distance + rayPos[0], rayDir[1] * distance + rayPos[1],
                         rayDir[2] * distance + rayPos[2] };
-                if (Math.random() > 0) {
+                        
+                if (ThreadLocalRandom.current().nextDouble() > 1) {
                     rayDir = new double[] { randVec[0], randVec[1], randVec[2] };
                 } else {
 
@@ -335,9 +371,9 @@ public class pathTracer extends JFrame {
 
     public double[] randomBounceVector() {
         while (true) {
-            double randX = (double) (Math.random() * 2) - 1;
-            double randY = (double) (Math.random() * 2) - 1;
-            double randZ = (double) (Math.random() * 2) - 1;
+            double randX = (double) (ThreadLocalRandom.current().nextDouble() * 2) - 1;
+            double randY = (double) (ThreadLocalRandom.current().nextDouble() * 2) - 1;
+            double randZ = (double) (ThreadLocalRandom.current().nextDouble() * 2) - 1;
 
             double normalLength = (randX * randX) + (randY * randY) + (randZ * randZ);
 
