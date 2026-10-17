@@ -1,4 +1,7 @@
-This is a simple Java Ray-tracer written in a single class.
+**Java Path-Tracer**
+A simple Java Path-tracer for rendering cool scenes written in a single java class.
+
+
 
 I have done most of the development of this program in VS Code but it was originally made in Bluej. You should be able to ignore all of the redundant files.
 Install the java extension pack for vs code to run and compile java.
