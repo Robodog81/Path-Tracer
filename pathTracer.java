@@ -21,7 +21,7 @@ public class pathTracer extends JFrame {
     final int BOARDHEIGHT = 1080 / 4;
     final int CELLSIZE = 1;
     final boolean ANTIALIASING = true;
-    final int THREADAMT = 8;
+    final int THREADAMT = Runtime.getRuntime().availableProcessors(); //  the amount of available threads
     final int SKYBRIGHTNESS = 255;
     final int MAXBOUNCES = 10;
     int toneMapType = 2; // only not a final because vs code hilights the alternative map as unused code
