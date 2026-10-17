@@ -3,6 +3,8 @@ A simple Java Path-tracer for rendering cool scenes written in a single java cla
 
 ![A simple scene](DemoImage.png?raw=true)
 ![Testing GitHub Image](https://github.com)
+<img src="DemoImage.png" alt="A simple scene" width="100%">
+
 
 I have done most of the development of this program in VS Code but it was originally made in Bluej. You should be able to ignore all of the redundant files.
 Install the java extension pack for vs code to run and compile java.
