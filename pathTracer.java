@@ -143,6 +143,7 @@ public class pathTracer extends JFrame {
                 g.drawString("Frame: " + frameNumber, 20, 30);
                 g.drawString("FPS: " + Math.round(fPS * 10) / 10, 20, 50);
                 g.drawString("Time To 500: " + Math.round(timeTo500 * 100) / 100.0, 20, 70);
+                g.drawString("Threads: " + THREADAMT, 20, 90);
             }
         };
 
