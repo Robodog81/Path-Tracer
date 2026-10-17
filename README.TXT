@@ -1,7 +1,7 @@
 Java Path-Tracer
 A simple Java Path-tracer for rendering cool scenes written in a single java class.
 
-![A simple scene](https://raw.githubusercontent.com/Robodog81/Path-Tracer/refs/heads/main/Screenshot_20261017_165619.png)
+![A simple scene](https://github.com/Robodog81/Path-Tracer/blob/main/Screenshot_20261017_165619.png?raw=true)
 
 I have done most of the development of this program in VS Code but it was originally made in Bluej. You should be able to ignore all of the redundant files.
 Install the java extension pack for vs code to run and compile java.
