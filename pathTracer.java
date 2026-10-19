@@ -17,13 +17,13 @@ import java.util.concurrent.ThreadLocalRandom;
 public class pathTracer extends JFrame {
     JPanel renderPanel;
 
-    final int BOARDWIDTH = 1920 / 4;
-    final int BOARDHEIGHT = 1080 / 4;
+    final int BOARDWIDTH = 1920 / 1;
+    final int BOARDHEIGHT = 1080 / 1;
     final int CELLSIZE = 1;
     final boolean ANTIALIASING = false;
     final int THREADAMT = Runtime.getRuntime().availableProcessors(); // the amount of available threads
     final int SKYBRIGHTNESS = 130;
-    final int MAXBOUNCES = 10;
+    final int MAXBOUNCES = 50;
     final double AIRRI = 1; // index of refraction of air
     int toneMapType = 2; // only not a final because vs code hilights the alternative map as unused code
 
@@ -37,7 +37,7 @@ public class pathTracer extends JFrame {
     int camY = -50;
     int camZ = -250;
 
-    double fOV = 400;
+    double fOV = 1000;
 
     int frameNumber = 1;
 
@@ -382,8 +382,8 @@ public class pathTracer extends JFrame {
         reflectDir[1] += randVec[1] * fuzziness;
         reflectDir[2] += randVec[2] * fuzziness;
 
-        double normalLength = Math.sqrt((rayDir[0] * rayDir[0]) + (rayDir[1] * rayDir[1])
-                + (rayDir[2] * rayDir[2]));
+        double normalLength = Math.sqrt((reflectDir[0] * reflectDir[0]) + (reflectDir[1] * reflectDir[1])
+                + (reflectDir[2] * reflectDir[2]));
         reflectDir[0] /= normalLength;
         reflectDir[1] /= normalLength;
         reflectDir[2] /= normalLength;
