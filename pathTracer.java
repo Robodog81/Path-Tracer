@@ -20,17 +20,18 @@ public class pathTracer extends JFrame {
     final int BOARDWIDTH = 1920 / 4;
     final int BOARDHEIGHT = 1080 / 4;
     final int CELLSIZE = 1;
-    final boolean ANTIALIASING = true;
-    final int THREADAMT = Runtime.getRuntime().availableProcessors(); //  the amount of available threads
-    final int SKYBRIGHTNESS = 255;
+    final boolean ANTIALIASING = false;
+    final int THREADAMT = Runtime.getRuntime().availableProcessors(); // the amount of available threads
+    final int SKYBRIGHTNESS = 130;
     final int MAXBOUNCES = 10;
+    final double AIRRI = 1; // index of refraction of air
     int toneMapType = 2; // only not a final because vs code hilights the alternative map as unused code
 
     double[][][] frameBuffer = new double[BOARDWIDTH][BOARDHEIGHT][3];
 
-    final int SPHEREAMT = 10;
-    double[][] sphereData = new double[11][SPHEREAMT]; // x, y, z, radius, r, g, b, emition r g b, material (10 wide,
-                                                       // spheres)
+    final int SPHEREAMT = 19;
+    double[][] sphereData = new double[12][SPHEREAMT]; // x, y, z, radius, r, g, b, emition r g b, material, extra
+                                                       // property (10 wide, spheres)
 
     int camX = 0;
     int camY = -50;
@@ -92,15 +93,19 @@ public class pathTracer extends JFrame {
          * brightness,
          * i);
          */
-        addSphere(0, 5000, 0, 5000, 1, 1, 1, 0, 0, 0, -1, 0);
-        addSphere(0, 0, 0, 20, 0.4, 1, 0.5, 0, 0, 0, -1, 1);
-        addSphere(-60, -30, 40, 25, 0, 0, 0, 255, 255, 255, -1, 2);
-        addSphere(100, -40, 100, 40, 0.4, 1, 0.5, 0, 0, 0, 0, 3);
-        addSphere(110, -40, -100, 40, 1, 0.2, 0.5, 0, 0, 0, 0, 4);
-        addSphere(-200, -40, 120, 40, 0.85, 1, 0.85, 0, 0, 0, 0, 5);
-        addSphere(-280, -40, 80, 40, 1, 0.85, 0.85, 0, 0, 0, 0, 6);
-        addSphere(290, -400, 700, 600, 0.8, 0.8, 0.8, 0, 0, 0, 0.1, 7);
-        //addSphere(0, -50, -100, 40, 1, 1, 1, 0, 0, 0, -2, 8);
+        addSphere(0, 5000, 0, 5000, 1, 1, 1, 0, 0, 0, 1, 0, 0);
+        addSphere(0, 0, 0, 20, 0.4, 1, 0.5, 0, 0, 0, 1, 0, 1);
+        addSphere(-60, -30, 40, 25, 0, 0, 0, 255, 255, 255, 1, 0, 2);
+        addSphere(100, -40, 100, 40, 0.4, 1, 0.5, 0, 0, 0, 2, 0, 3);
+        addSphere(110, -40, -100, 40, 1, 0.2, 0.5, 0, 0, 0, 2, 0, 4);
+        addSphere(-200, -40, 120, 40, 0.85, 1, 0.85, 0, 0, 0, 2, 0, 5);
+        addSphere(-280, -40, 80, 40, 1, 0.85, 0.85, 0, 0, 0, 2, 0, 6);
+        addSphere(290, -400, 700, 600, 0.8, 0.8, 0.8, 0, 0, 0, 2, 0.1, 7);
+        addSphere(100, -120, 0, 30, 0, 0, 0, 50, 1000, 50, 1, 0, 8);
+        addSphere(50, -20, -35, 20, 1, 1, 1, 0, 0, 0, 3, 1.5, 9);
+        addSphere(-70, -30, -35, 30, 1, 1, 1, 0, 0, 0, 3, 1.5, 10);
+        addSphere(0, -5, -45, 5, 1, 1, 1, 0, 0, 0, 3, 1.5, 11);
+        
         // }
 
         // 2. Create the Custom Grid Panel
@@ -157,7 +162,7 @@ public class pathTracer extends JFrame {
     }
 
     public void addSphere(double x, double y, double z, double radius, double r, double g, double b, double emmitR,
-            double emmitG, double emmitB, double material, int index) {
+            double emmitG, double emmitB, int material, double extra, int index) {
         sphereData[0][index] = x; // position x
         sphereData[1][index] = y; // position y
         sphereData[2][index] = z; // position z
@@ -168,7 +173,8 @@ public class pathTracer extends JFrame {
         sphereData[7][index] = emmitR; // emmited light r
         sphereData[8][index] = emmitG; // emmited light g
         sphereData[9][index] = emmitB; // emmited light b
-        sphereData[10][index] = material; // material, -1 is matte. 0 is reflective, > 0 is reflection fuzz
+        sphereData[10][index] = material; // material, 1 is matte, 2 is metal, 3 is glass
+        sphereData[11][index] = extra; // extra property, fuzzieness for metal, refractive index for glass
     }
 
     public double[] toneMap(double[] colour) {
@@ -277,7 +283,7 @@ public class pathTracer extends JFrame {
         double[] rayDir = new double[] { dirX, dirY, dirZ };
 
         float[] rayColor = new float[] { 1, 1, 1 };
-        float[] incomingLight = new float[] { 0, 0, 0 };
+        double[] incomingLight = new double[] { 0, 0, 0 };
 
         for (int i = 0; i < MAXBOUNCES; i++) { // bounces the ray multiple times
 
@@ -286,19 +292,23 @@ public class pathTracer extends JFrame {
             double distance = nextRay[0];
 
             if (distance > 0) { // if the ray hit a sphere, caculate the new ray position and direction
-                double randVec[] = randomBounceVector();
-
                 rayPos = new double[] { rayDir[0] * distance + rayPos[0], rayDir[1] * distance + rayPos[1],
                         rayDir[2] * distance + rayPos[2] };
 
-                if (sphereData[10][(int) nextRay[4]] == -1) {
-                    rayDir = defuseMaterial(new double[] { nextRay[1], nextRay[2], nextRay[3] });
-                } else if (sphereData[10][(int) nextRay[4]] == -2) {
-                    rayDir = glassMaterial(new double[] { nextRay[1], nextRay[2], nextRay[3] },
-                            new double[] { rayDir[0], rayDir[1], rayDir[2] }, (int) nextRay[5]);
-                } else {
-                    rayDir = metalMaterial(new double[] { nextRay[1], nextRay[2], nextRay[3] },
-                            new double[] { rayDir[0], rayDir[1], rayDir[2] }, (int) nextRay[4]);
+                switch ((int) sphereData[10][(int) nextRay[4]]) {
+                    case 1:
+                        rayDir = defuseMaterial(new double[] { nextRay[1], nextRay[2], nextRay[3] });
+                        break;
+                    case 2:
+                        rayDir = metalMaterial(new double[] { nextRay[1], nextRay[2], nextRay[3] }, rayDir,
+                                (int) nextRay[4]);
+                        break;
+                    case 3:
+                        rayDir = glassMaterial(new double[] { nextRay[1], nextRay[2], nextRay[3] }, rayDir,
+                                (int) nextRay[5], (int) nextRay[4]);
+                        break;
+                    default:
+                        System.out.println("No Sphere Material Found!");
                 }
 
                 incomingLight[0] += sphereData[7][(int) nextRay[4]] * rayColor[0];
@@ -315,17 +325,17 @@ public class pathTracer extends JFrame {
                 incomingLight[1] += bgColour[1] * rayColor[1];
                 incomingLight[2] += bgColour[2] * rayColor[2];
 
-                return new double[] { incomingLight[0], incomingLight[1], incomingLight[2] };
+                return incomingLight;
                 // break out of the loop as the ray hit the background
             }
         }
-        return new double[] { incomingLight[0], incomingLight[1], incomingLight[2] };
+        return incomingLight;
         // the ray has finished bouncing
     }
 
     public double[] defuseMaterial(double[] surfaceNormal) {
         double randVec[] = randomBounceVector();
-        double bounceDir[] = new double[] { surfaceNormal[0], surfaceNormal[1], surfaceNormal[2] };
+        double bounceDir[] = surfaceNormal;
         bounceDir[0] += randVec[0];
         bounceDir[1] += randVec[1];
         bounceDir[2] += randVec[2];
@@ -340,33 +350,37 @@ public class pathTracer extends JFrame {
         return bounceDir;
     }
 
-    public double[] glassMaterial(double[] surfaceNormal, double[] rayDir, int internalBounce) {
-        double[] refractDir;
-        if (internalBounce == 0) {
-            refractDir = refract(new double[] { rayDir[0], rayDir[1], rayDir[2] },
-                    new double[] { surfaceNormal[0], surfaceNormal[1], surfaceNormal[2] }, -1.333);
-            // System.out.println("refract1");
+    public double[] glassMaterial(double[] surfaceNormal, double[] rayDir, int internalBounce, int collisionIndex) {
+        if (internalBounce == 1)
+            surfaceNormal = new double[] { -surfaceNormal[0], -surfaceNormal[1], -surfaceNormal[2] };
+
+        double ballRafractiionIndex = sphereData[11][collisionIndex];
+        double[] newDir;
+        double refractionIndex = internalBounce == 0 ? (AIRRI / ballRafractiionIndex) : ballRafractiionIndex;
+
+        double cosTheta = dot(-rayDir[0], -rayDir[1], -rayDir[2], surfaceNormal[0], surfaceNormal[1], surfaceNormal[2]);
+        cosTheta = cosTheta > 1 ? 1 : cosTheta; // prevent it from going over 1
+        double sinTheta = Math.sqrt(1 - cosTheta * cosTheta);
+        boolean cannotRefract = refractionIndex * sinTheta > 1;
+
+        if (cannotRefract || reflectance(cosTheta, refractionIndex) > ThreadLocalRandom.current().nextDouble()) {
+            newDir = reflect(rayDir, surfaceNormal);
         } else {
-            refractDir = refract(new double[] { rayDir[0], rayDir[1], rayDir[2] },
-                    new double[] { -surfaceNormal[0], -surfaceNormal[1], -surfaceNormal[2] }, -1);
-            // System.out.println("refract2");
+            newDir = refract(rayDir, surfaceNormal, refractionIndex);
         }
-        rayDir = new double[] { refractDir[0], refractDir[1], refractDir[2] };
-        return refractDir;
+        return newDir;
     }
 
     public double[] metalMaterial(double[] surfaceNormal, double[] rayDir, int collisionIndex) {
         double randVec[] = randomBounceVector();
-        double dot = dot(rayDir[0], rayDir[1], rayDir[2], surfaceNormal[0], surfaceNormal[1],
-                surfaceNormal[2]);
-        double[] reflectDir = new double[3];
-        reflectDir[0] = rayDir[0] - 2 * dot * surfaceNormal[0];
-        reflectDir[1] = rayDir[1] - 2 * dot * surfaceNormal[1];
-        reflectDir[2] = rayDir[2] - 2 * dot * surfaceNormal[2];
 
-        reflectDir[0] += randVec[0] * sphereData[10][collisionIndex];
-        reflectDir[1] += randVec[1] * sphereData[10][collisionIndex];
-        reflectDir[2] += randVec[2] * sphereData[10][collisionIndex];
+        double[] reflectDir = reflect(rayDir, surfaceNormal);
+
+        double fuzziness = sphereData[11][collisionIndex];
+
+        reflectDir[0] += randVec[0] * fuzziness;
+        reflectDir[1] += randVec[1] * fuzziness;
+        reflectDir[2] += randVec[2] * fuzziness;
 
         double normalLength = Math.sqrt((rayDir[0] * rayDir[0]) + (rayDir[1] * rayDir[1])
                 + (rayDir[2] * rayDir[2]));
@@ -374,6 +388,21 @@ public class pathTracer extends JFrame {
         reflectDir[1] /= normalLength;
         reflectDir[2] /= normalLength;
         return reflectDir;
+    }
+
+    public double[] reflect(double[] uv, double[] normal) {
+        double[] reflect = new double[3];
+        double dot = dot(uv[0], uv[1], uv[2], normal[0], normal[1], normal[2]);
+        reflect[0] = uv[0] - 2 * dot * normal[0];
+        reflect[1] = uv[1] - 2 * dot * normal[1];
+        reflect[2] = uv[2] - 2 * dot * normal[2];
+        return reflect;
+    }
+
+    public double reflectance(double cosine, double refractionIndex) {
+        double r0 = (1 - refractionIndex) / (1 + refractionIndex);
+        r0 *= r0; // square the value
+        return r0 + (1 - r0) * Math.pow((1 - cosine), 5);
     }
 
     public double[] refract(double[] uv, double[] normal, double etaiOverEtat) {
@@ -428,18 +457,13 @@ public class pathTracer extends JFrame {
                     double t1C = Math.sqrt((sphereRadius * sphereRadius) - (d * d));
                     double t1 = tC - t1C;
                     double t2 = tC + t1C;
-                    /*
-                     * if (t1 < 0)
-                     * t1 = 0;
-                     * if (t2 < 0)
-                     * t2 = 0;
-                     */
 
                     double nearestCollision;
                     int innerCollision = 0; // if the ray is inside the sphere
-                    if (t1 < t2 && t1 > 0) { // prioritise the closer collision, for glass inner collisions
+                    if (t1 < t2 && t1 > 0.00000001) { // prioritise the closer collision, for glass inner collisions
                         nearestCollision = t1;
                         innerCollision = 0;
+                        // System.out.println("collide Outside");
                     } else {
                         nearestCollision = t2;
                         innerCollision = 1;
