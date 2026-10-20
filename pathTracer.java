@@ -89,7 +89,7 @@ public class pathTracer extends JFrame {
          * addSphere(0, -5, -45, 5, 1, 1, 1, 0, 0, 0, 3, 1.5);
          */
 
-        addSphere(0, 10000000, 0, 10000000, 1, 1, 1, 0, 0, 0, 1, 0);
+        addSphere(0, 100000000, 0, 100000000, 1, 1, 1, 0, 0, 0, 1, 0);
         addSphere(0, -130, 0, 60, 1, 1, 1, 0, 0, 0, 3, 1.5);
         addSphere(80, -300, 80, 20, 1, 1, 1, Math.random() * 1000, Math.random() *
                 1000, Math.random() * 1000, 3, 1.5);
