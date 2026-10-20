@@ -2,7 +2,7 @@
 ## **A simple Java Path-tracer for rendering cool scenes written in a single java class.**
 
 
-![A simple scene](DemoImage.png?raw=true)
+![A simple scene](DemoImage2?raw=true)
 
 
 I have done most of the development of this program in VS Code but it was originally made in Bluej. You should be able to ignore all of the redundant files.
