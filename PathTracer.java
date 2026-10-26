@@ -857,6 +857,7 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
     public void settingsPopup() { // slider layout based on a google ai overveiw example
         settings.setLayout(new BorderLayout());
         settings.setResizable(false);
+        settings.setTitle("Sphere Editor");
 
         JPanel contentPanelLeft = new JPanel();
         contentPanelLeft.setLayout(new BoxLayout(contentPanelLeft, BoxLayout.Y_AXIS));
@@ -976,6 +977,7 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
     public void globalSettingsPopup() { // slider layout based on a google ai overveiw example
         globalSettings.setLayout(new BorderLayout());
         globalSettings.setResizable(false);
+        globalSettings.setTitle("Extra Settings");
 
         JPanel contentPanelLeft = new JPanel();
         contentPanelLeft.setLayout(new BoxLayout(contentPanelLeft, BoxLayout.Y_AXIS));
