@@ -21,18 +21,19 @@ import java.util.List;
 public class PathTracer extends JFrame implements MouseListener, MouseMotionListener, ActionListener, KeyListener {
     JPanel renderPanel;
 
-    JDialog settings;
+    JDialog settings = new JDialog(this);
+    JDialog globalSettings = new JDialog(this);
 
     final int BOARDWIDTH = 1920 / 4;
     final int BOARDHEIGHT = 1080 / 4;
     final int CELLSIZE = 1;
     final boolean ANTIALIASING = false;
     final int THREADAMT = Runtime.getRuntime().availableProcessors(); // the amount of available threads
-    final int SKYBRIGHTNESS = 150;
     final int MAXBOUNCES = 50;
     final double AIRRI = 1; // index of refraction of air
     int toneMapType = 2; // only not a final because vs code hilights the alternative map as unused code
     boolean previewRender = true;
+    int skyBrightness = 150;
 
     double[][][] frameBuffer = new double[BOARDWIDTH][BOARDHEIGHT][3];
 
@@ -43,7 +44,7 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
     int camY = -90;
     int camZ = -250;
 
-    int selectedSphere = 8;
+    int selectedSphere = 0;
 
     double fOV = 150;
 
@@ -73,21 +74,30 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
 
         JMenu optionsMenu = new JMenu("Options");
 
-        JMenuItem editItem = new JMenuItem("Edit");
-        editItem.addActionListener(this);
+        JMenuItem renderItem = new JMenuItem("Toggle Render Mode");
+        renderItem.addActionListener(this);
+        renderItem.setAccelerator(KeyStroke.getKeyStroke('r'));
         JMenuItem editPopupItem = new JMenuItem("Sphere Editor");
         editPopupItem.addActionListener(this);
-        JMenuItem resetItem = new JMenuItem("Reset");
-        resetItem.addActionListener(this);
-        JMenuItem resizeItem = new JMenuItem("Resize");
-        resetItem.addActionListener(this);
+        editPopupItem.setAccelerator(KeyStroke.getKeyStroke('t'));
+        JMenuItem addItem = new JMenuItem("Add Sphere");
+        addItem.addActionListener(this);
+        addItem.setAccelerator(KeyStroke.getKeyStroke('+'));
+        JMenuItem removeItem = new JMenuItem("Remove Sphere");
+        removeItem.addActionListener(this);
+        removeItem.setAccelerator(KeyStroke.getKeyStroke('-'));
+        JMenuItem extraSettings = new JMenuItem("Extra Settings");
+        extraSettings.addActionListener(this);
+        extraSettings.setAccelerator(KeyStroke.getKeyStroke('f'));
 
-        optionsMenu.add(editItem);
+        optionsMenu.add(renderItem);
         optionsMenu.add(editPopupItem);
         optionsMenu.addSeparator();
-        optionsMenu.add(resetItem);
-        optionsMenu.add(resizeItem);
+        optionsMenu.add(addItem);
+        optionsMenu.add(removeItem);
         menuBar.add(optionsMenu);
+        optionsMenu.addSeparator();
+        optionsMenu.add(extraSettings);
 
         setJMenuBar(menuBar);
 
@@ -218,17 +228,41 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
 
     public void actionPerformed(ActionEvent e) {
         switch (e.getActionCommand()) {
-            case "Edit":
-                System.out.println("Edit Clicked");
+            case "Toggle Render Mode":
                 previewRender = !previewRender;
+                settings.setVisible(false);
+                globalSettings.setVisible(false);
                 reset(previewRender);
                 break;
             case "Sphere Editor":
+                previewRender = true;
+                reset(previewRender);
                 if (settings == null) // for the first time (not openned yet) it is just null
                     settingsPopup();
-                else if (!settings.isVisible()) // if it is hidden (closed)
+                else if (!settings.isVisible()) { // if it is hidden (closed)
                     settingsPopup();
+                }
                 reset(previewRender);
+                break;
+            case "Add Sphere":
+                addSphere(0, 0, 0, 30, 1, 1, 1, 0, 0, 0, 1, 0);
+                selectedSphere = sphereData.size() - 1;
+                break;
+            case "Remove Sphere":
+                sphereData.remove(selectedSphere);
+                // prevent the selected sphere acessing an invalid index
+                if (selectedSphere > sphereData.size() - 1) {
+                    selectedSphere = sphereData.size() - 1;
+                    if (sphereData.size() == 0)
+                        selectedSphere = 0;
+                }
+                break;
+            case "Extra Settings":
+                if (globalSettings == null) // for the first time (not openned yet) it is just null
+                    globalSettingsPopup();
+                else if (!globalSettings.isVisible()) { // if it is hidden (closed)
+                    globalSettingsPopup();
+                }
                 break;
             default:
                 break;
@@ -338,16 +372,18 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
     }
 
     public void editSpheres() {
-        double[] currentSphere = sphereData.get(selectedSphere);
+        if (sphereData.size() > 0) {
+            double[] currentSphere = sphereData.get(selectedSphere);
 
-        // move the selected sphere using the current pressed keys
-        currentSphere[0] += (pressedKeys[3] - pressedKeys[1]) * 2;
-        currentSphere[1] += (pressedKeys[4] - pressedKeys[5]) * 2;
-        currentSphere[2] += (pressedKeys[0] - pressedKeys[2]) * 2;
+            // move the selected sphere using the current pressed keys
+            currentSphere[0] += (pressedKeys[3] - pressedKeys[1]) * 2;
+            currentSphere[1] += (pressedKeys[4] - pressedKeys[5]) * 2;
+            currentSphere[2] += (pressedKeys[0] - pressedKeys[2]) * 2;
 
-        reset(true);
+            reset(true);
 
-        sphereData.set(selectedSphere, currentSphere);
+            sphereData.set(selectedSphere, currentSphere);
+        }
     }
 
     public void renderChunk(int startArea) {
@@ -815,14 +851,13 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
     public double[] getBackGround(double yIn) {
         // returns a colour based on the y value of the ray, used to make a sky gradient
         double blend = (yIn / 4) + 0.75;
-        return new double[] { blend * SKYBRIGHTNESS, blend * SKYBRIGHTNESS, SKYBRIGHTNESS };
+        return new double[] { blend * skyBrightness, blend * skyBrightness, skyBrightness };
     }
 
-    public void settingsPopup() { // based on a google ai overveiw example
-        if (settings == null)
-            settings = new JDialog(this);
+    public void settingsPopup() { // slider layout based on a google ai overveiw example
         settings.setLayout(new BorderLayout());
         settings.setResizable(false);
+
         JPanel contentPanelLeft = new JPanel();
         contentPanelLeft.setLayout(new BoxLayout(contentPanelLeft, BoxLayout.Y_AXIS));
         contentPanelLeft.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10)); // add padding on the border
@@ -853,22 +888,6 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
         JSlider s8 = new JSlider(1, 3, (int) clamp(data[10], 0, 2) + 1);
         JSlider s9 = new JSlider(0, 1000, (int) clamp(data[11] * 1000, 0, 1000.0));
 
-        JButton resetButton = new JButton("Reset All");
-        resetButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) { // reset all the values to the defaults
-                s1.setValue(278);
-                s2.setValue(365);
-                s3.setValue(267);
-                s4.setValue(445);
-                s5.setValue(28);
-                s6.setValue(147);
-                s7.setValue(150);
-                s8.setValue(2);
-                s9.setValue(6);
-            }
-        });
-
         JLabel[] labels = { radius, r, g, b, eR, eG, eB, material, mExtra };
         JSlider[] sliders = { s1, s2, s3, s4, s5, s6, s7, s8, s9 };
         String[] titles = { "Radius: ", "Red: ", "Green: ", "Blue: ", "Emmsion Red: ", "Emmision Green: ",
@@ -887,6 +906,10 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
             }
 
             sliders[i].addChangeListener(e -> {
+                // change back into edit mode if rendering
+                previewRender = true;
+                reset(previewRender);
+
                 // Read the current integer value
                 int value = sliders[index].getValue();
 
@@ -936,7 +959,6 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
             contentPanelLeft.add(sliders[i]);
             contentPanelLeft.add(Box.createRigidArea(new Dimension(230, 20))); // Spacing
         }
-        contentPanelLeft.add(resetButton); // add the reset button at the bottom
 
         // Add the group to the dialog
         settings.add(contentPanelLeft, BorderLayout.WEST);
@@ -949,6 +971,82 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
         settings.setAlwaysOnTop(false);
         settings.setAutoRequestFocus(false);
         settings.setVisible(true);
+    }
+
+    public void globalSettingsPopup() { // slider layout based on a google ai overveiw example
+        globalSettings.setLayout(new BorderLayout());
+        globalSettings.setResizable(false);
+
+        JPanel contentPanelLeft = new JPanel();
+        contentPanelLeft.setLayout(new BoxLayout(contentPanelLeft, BoxLayout.Y_AXIS));
+        contentPanelLeft.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10)); // add padding on the border
+
+        JPanel contentPanelRight = new JPanel();
+        contentPanelRight.setLayout(new BoxLayout(contentPanelRight, BoxLayout.Y_AXIS));
+        contentPanelRight.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+
+        JLabel skyBrightnessLabel = new JLabel("Sky Brightness: " + skyBrightness, JLabel.CENTER);
+        JLabel toneMapLabel = new JLabel("Tone-Mapp Type: " + toneMapType, JLabel.CENTER);
+
+        JSlider s1 = new JSlider(0, 1000, (int) max(skyBrightness * 4, 255));
+        JSlider s2 = new JSlider(1, 3, (int) toneMapType);
+
+        JLabel[] labels = { skyBrightnessLabel, toneMapLabel };
+        JSlider[] sliders = { s1, s2 };
+        String[] titles = { "Sky Brightness: ", "Tone-Mapp Type: " };
+
+        // Loop to configure and add components
+        for (int i = 0; i < labels.length; i++) {
+            int index = i; // so the listner can read i
+
+            if (index == 0)
+                sliders[i].setMajorTickSpacing(30);
+            else
+                sliders[i].setMajorTickSpacing(1);
+            sliders[i].setPaintTicks(true);
+
+            sliders[i].addChangeListener(e -> {
+                // change back into edit mode if rendering
+                previewRender = true;
+                reset(previewRender);
+
+                // Read the current integer value
+                int value = sliders[index].getValue();
+
+                if (index == 0)
+                    labels[index].setText(titles[index] + value / 4.0);
+                else
+                    labels[index].setText(titles[index] + value);
+
+                switch (index) {
+                    case 0:
+                        skyBrightness = value / 4;
+                        break;
+                    case 1:
+                        toneMapType = value;
+                        break;
+                    default:
+                        break;
+                }
+            });
+
+            // Add elements to the panel
+            contentPanelLeft.add(labels[i]);
+            contentPanelLeft.add(sliders[i]);
+            contentPanelLeft.add(Box.createRigidArea(new Dimension(230, 20))); // Spacing
+        }
+
+        // Add the group to the dialog
+        globalSettings.add(contentPanelLeft, BorderLayout.WEST);
+        globalSettings.add(contentPanelRight, BorderLayout.EAST);
+
+        globalSettings.setDefaultCloseOperation(HIDE_ON_CLOSE);
+        globalSettings.revalidate(); // Updates the layout
+        globalSettings.repaint();
+        globalSettings.pack();
+        globalSettings.setAlwaysOnTop(false);
+        globalSettings.setAutoRequestFocus(false);
+        globalSettings.setVisible(true);
     }
 
     public void mouseExited(MouseEvent e) {
@@ -1000,8 +1098,8 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
                 pressedKeys[5] = 1;
                 break;
             case 37:
-                if (selectedSphere < sphereData.size() - 1) {
-                    selectedSphere++;
+                if (selectedSphere > 0) {
+                    selectedSphere--;
                     if (settings.isVisible()) {
                         settings.setVisible(false);
                         settingsPopup();
@@ -1009,8 +1107,8 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
                 }
                 break;
             case 39:
-                if (selectedSphere > 0) {
-                    selectedSphere--;
+                if (selectedSphere < sphereData.size() - 1) {
+                    selectedSphere++;
                     if (settings.isVisible()) {
                         settings.setVisible(false);
                         settingsPopup();
