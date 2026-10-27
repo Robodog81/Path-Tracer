@@ -24,8 +24,8 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
     JDialog settings = new JDialog(this);
     JDialog globalSettings = new JDialog(this);
 
-    final int BOARDWIDTH = 1920 / 4;
-    final int BOARDHEIGHT = 1080 / 4;
+    final int BOARDWIDTH = 3440 / 4;
+    final int BOARDHEIGHT = 1440 / 4;
     final int CELLSIZE = 1;
     final boolean ANTIALIASING = false;
     final int THREADAMT = Runtime.getRuntime().availableProcessors(); // the amount of available threads
@@ -887,7 +887,7 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
         JSlider s6 = new JSlider(0, 1000, (int) clamp(data[8], 0, 1000.0));
         JSlider s7 = new JSlider(0, 1000, (int) clamp(data[9], 0, 1000.0));
         JSlider s8 = new JSlider(1, 3, (int) clamp(data[10], 0, 2) + 1);
-        JSlider s9 = new JSlider(0, 1000, (int) clamp(data[11] * 1000, 0, 1000.0));
+        JSlider s9 = new JSlider(0, 1000, (int) clamp(data[11] * 200, 0, 1000.0));
 
         JLabel[] labels = { radius, r, g, b, eR, eG, eB, material, mExtra };
         JSlider[] sliders = { s1, s2, s3, s4, s5, s6, s7, s8, s9 };
