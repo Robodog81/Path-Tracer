@@ -21,8 +21,8 @@ import java.util.List;
 public class PathTracer extends JFrame implements MouseListener, MouseMotionListener, ActionListener, KeyListener {
     JPanel renderPanel;
 
-    JDialog settings = new JDialog(this);
-    JDialog globalSettings = new JDialog(this);
+    JDialog settings = new JDialog();
+    JDialog globalSettings = new JDialog();
 
     final int BOARDWIDTH = 3440 / 4;
     final int BOARDHEIGHT = 1440 / 4;
@@ -855,6 +855,8 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
     }
 
     public void settingsPopup() { // slider layout based on a google ai overveiw example
+        settings = new JDialog();
+
         settings.setLayout(new BorderLayout());
         settings.setResizable(false);
         settings.setTitle("Sphere Editor");
@@ -868,6 +870,8 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
         contentPanelRight.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
 
         double[] data = sphereData.get(selectedSphere);
+        System.out.println(selectedSphere);
+        System.out.println(data[3]);
 
         JLabel radius = new JLabel("Radius: " + data[3], JLabel.CENTER);
         JLabel r = new JLabel("Red: " + data[4], JLabel.CENTER);
@@ -975,6 +979,7 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
     }
 
     public void globalSettingsPopup() { // slider layout based on a google ai overveiw example
+        globalSettings = new JDialog();
         globalSettings.setLayout(new BorderLayout());
         globalSettings.setResizable(false);
         globalSettings.setTitle("Extra Settings");
