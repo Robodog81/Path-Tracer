@@ -24,8 +24,8 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
     JDialog settings = new JDialog();
     JDialog globalSettings = new JDialog();
 
-    final int BOARDWIDTH = 3440 / 4;
-    final int BOARDHEIGHT = 1440 / 4;
+    final int BOARDWIDTH = 1920 / 4;
+    final int BOARDHEIGHT = 1080 / 4;
     final int CELLSIZE = 1;
     final boolean ANTIALIASING = false;
     final int THREADAMT = Runtime.getRuntime().availableProcessors(); // the amount of available threads
@@ -237,16 +237,15 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
             case "Sphere Editor":
                 previewRender = true;
                 reset(previewRender);
-                if (settings == null) // for the first time (not openned yet) it is just null
-                    settingsPopup();
-                else if (!settings.isVisible()) { // if it is hidden (closed)
-                    settingsPopup();
-                }
+                launchSettings();
                 reset(previewRender);
                 break;
             case "Add Sphere":
                 addSphere(0, 0, 0, 30, 1, 1, 1, 0, 0, 0, 1, 0);
                 selectedSphere = sphereData.size() - 1;
+                // update the settings menu
+                if (settings.isVisible())
+                    launchSettings();
                 break;
             case "Remove Sphere":
                 sphereData.remove(selectedSphere);
@@ -256,6 +255,9 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
                     if (sphereData.size() == 0)
                         selectedSphere = 0;
                 }
+                // update the settings menu
+                if (settings.isVisible())
+                    launchSettings();
                 break;
             case "Extra Settings":
                 if (globalSettings == null) // for the first time (not openned yet) it is just null
@@ -275,6 +277,15 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
         if (!preview)
             frameBuffer = new double[BOARDWIDTH][BOARDHEIGHT][3];
         frameNumber = 1;
+    }
+
+    public void launchSettings() {
+        settings.setVisible(false);
+        if (settings == null) // for the first time (not openned yet) it is just null
+            settingsPopup();
+        else if (!settings.isVisible()) { // if it is hidden (closed)
+            settingsPopup();
+        }
     }
 
     public void addSphere(double x, double y, double z, double radius, double r, double g, double b, double emmitR,
@@ -870,8 +881,6 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
         contentPanelRight.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
 
         double[] data = sphereData.get(selectedSphere);
-        System.out.println(selectedSphere);
-        System.out.println(data[3]);
 
         JLabel radius = new JLabel("Radius: " + data[3], JLabel.CENTER);
         JLabel r = new JLabel("Red: " + data[4], JLabel.CENTER);
@@ -890,7 +899,7 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
         JSlider s5 = new JSlider(0, 1000, (int) clamp(data[7], 0, 1000.0));
         JSlider s6 = new JSlider(0, 1000, (int) clamp(data[8], 0, 1000.0));
         JSlider s7 = new JSlider(0, 1000, (int) clamp(data[9], 0, 1000.0));
-        JSlider s8 = new JSlider(1, 3, (int) clamp(data[10], 0, 2) + 1);
+        JSlider s8 = new JSlider(1, 3, (int) clamp(data[10], 1, 3));
         JSlider s9 = new JSlider(0, 1000, (int) clamp(data[11] * 200, 0, 1000.0));
 
         JLabel[] labels = { radius, r, g, b, eR, eG, eB, material, mExtra };
@@ -973,7 +982,7 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
         settings.revalidate(); // Updates the layout
         settings.repaint();
         settings.pack();
-        settings.setAlwaysOnTop(false);
+        settings.setAlwaysOnTop(true);
         settings.setAutoRequestFocus(false);
         settings.setVisible(true);
     }
@@ -1074,9 +1083,12 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
     public void mouseMoved(MouseEvent e) {
         int mouseY = e.getY();
         if (mouseY < 60) {
-            menuBar.setVisible(true);
+            menuBar.setPreferredSize(new Dimension(0, 24));
+            menuBar.revalidate();
         } else {
-            menuBar.setVisible(false);
+            // make the menubar 0px tall so keybinds still work & it is hidden
+            menuBar.setPreferredSize(new Dimension(0, 0));
+            menuBar.revalidate();
         }
     }
 
@@ -1108,8 +1120,7 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
                 if (selectedSphere > 0) {
                     selectedSphere--;
                     if (settings.isVisible()) {
-                        settings.setVisible(false);
-                        settingsPopup();
+                        launchSettings();
                     }
                 }
                 break;
@@ -1117,8 +1128,7 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
                 if (selectedSphere < sphereData.size() - 1) {
                     selectedSphere++;
                     if (settings.isVisible()) {
-                        settings.setVisible(false);
-                        settingsPopup();
+                        launchSettings();
                     }
                 }
                 break;
