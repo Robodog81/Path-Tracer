@@ -34,6 +34,7 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
     int toneMapType = 2; // only not a final because vs code hilights the alternative map as unused code
     boolean previewRender = true;
     int skyBrightness = 150;
+    boolean debugInfo = true;
 
     double[][][] frameBuffer = new double[BOARDWIDTH][BOARDHEIGHT][3];
 
@@ -205,15 +206,17 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
                 int screenWidth = getWidth();
                 int screenHeight = getHeight();
                 g.drawImage(buffer, 0, 0, screenWidth, screenHeight, null); // put the buffer onto the screen
-                Font customFont = new Font("Arial", Font.BOLD, 18);
-                g.setColor(Color.RED);
-                g.setFont(customFont);
-                g.drawString("Frame: " + frameNumber, 20, 30);
-                g.drawString("FPS: " + Math.round(fPS * 10) / 10, 20, 50);
-                g.drawString("Time To 500: " + Math.round(timeTo500 * 100) / 100.0, 20, 70);
-                g.drawString("Threads: " + THREADAMT, 20, 90);
-                g.drawString("Run Time: " + Math.round((System.nanoTime() - startTime) / 100000000) / 10.0, 20,
-                        110);
+                if (debugInfo) {
+                    Font customFont = new Font("Arial", Font.BOLD, 18);
+                    g.setColor(Color.RED);
+                    g.setFont(customFont);
+                    g.drawString("Frame: " + frameNumber, 20, 30);
+                    g.drawString("FPS: " + Math.round(fPS * 10) / 10, 20, 50);
+                    g.drawString("Time To 500: " + Math.round(timeTo500 * 100) / 100.0, 20, 70);
+                    g.drawString("Threads: " + THREADAMT, 20, 90);
+                    g.drawString("Run Time: " + Math.round((System.nanoTime() - startTime) / 100000000) / 10.0, 20,
+                            110);
+                }
             }
         };
 
@@ -1011,6 +1014,8 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
         JSlider[] sliders = { s1, s2 };
         String[] titles = { "Sky Brightness: ", "Tone-Mapp Type: " };
 
+        JCheckBox debugBox = new JCheckBox("Debug Information", true);
+
         // Loop to configure and add components
         for (int i = 0; i < labels.length; i++) {
             int index = i; // so the listner can read i
@@ -1051,6 +1056,11 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
             contentPanelLeft.add(sliders[i]);
             contentPanelLeft.add(Box.createRigidArea(new Dimension(230, 20))); // Spacing
         }
+        debugBox.addChangeListener(e -> {
+            debugInfo = debugBox.isSelected();
+        });
+
+        contentPanelLeft.add(debugBox);
 
         // Add the group to the dialog
         globalSettings.add(contentPanelLeft, BorderLayout.WEST);
