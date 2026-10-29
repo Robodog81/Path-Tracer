@@ -689,30 +689,41 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
     }
 
     public double[] metalMaterial(double[] surfaceNormal, double[] rayDir, int collisionIndex) {
-        double[] randVec = new double[3];
-        ;
-        if (!previewRender) {
-            randVec = randomBounceVector();
-        }
+        double fuzziness = sphereData.get(collisionIndex)[11];
 
         double[] reflectDir = reflect(rayDir, surfaceNormal);
 
-        double fuzziness = sphereData.get(collisionIndex)[11];
+        double[] newDir = reflectDir;
 
-        reflectDir[0] += randVec[0] * fuzziness;
-        reflectDir[1] += randVec[1] * fuzziness;
-        reflectDir[2] += randVec[2] * fuzziness;
+        if (fuzziness > 0) {
+            boolean continueLoop = true;
+            while (continueLoop) {
+                double[] randVec = new double[3];
+                if (!previewRender)
+                    randVec = randomBounceVector();
 
-        double normalLength = Math.sqrt((reflectDir[0] * reflectDir[0]) + (reflectDir[1] * reflectDir[1])
-                + (reflectDir[2] * reflectDir[2]));
-        reflectDir[0] /= normalLength;
-        reflectDir[1] /= normalLength;
-        reflectDir[2] /= normalLength;
+                newDir = reflectDir;
 
-        // if the new direction goes inside the ray just default to a normal bounce
-        if (dot(reflectDir, surfaceNormal) < 0)
-            return reflect(rayDir, surfaceNormal);
-        return reflectDir;
+                newDir[0] += randVec[0] * fuzziness;
+                newDir[1] += randVec[1] * fuzziness;
+                newDir[2] += randVec[2] * fuzziness;
+
+                // normalise
+                double normalLength = Math.sqrt((newDir[0] * newDir[0]) + (newDir[1] * newDir[1])
+                        + (newDir[2] * newDir[2]));
+                newDir[0] /= normalLength;
+                newDir[1] /= normalLength;
+                newDir[2] /= normalLength;
+
+                if (dot(newDir, surfaceNormal) > 0) {
+                    continueLoop = false;
+                }
+            }
+        } else {
+            // if there is no fuzz just reflect the ray
+            newDir = reflectDir;
+        }
+        return newDir;
     }
 
     public double[] reflect(double[] uv, double[] normal) {
@@ -892,7 +903,7 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
         JLabel eR = new JLabel("Emmision Red: " + data[7], JLabel.CENTER);
         JLabel eG = new JLabel("Emmision Green: " + data[8], JLabel.CENTER);
         JLabel eB = new JLabel("Emmision Blue: " + data[9], JLabel.CENTER);
-        JLabel material = new JLabel("Material: " + data[10], JLabel.CENTER);
+        JLabel material = new JLabel("Material: " + (int) data[10], JLabel.CENTER);
         JLabel mExtra = new JLabel("Material Property: " + data[11], JLabel.CENTER);
 
         JSlider s1 = new JSlider(0, 1000, (int) clamp(data[3], 0, 1000.0));
@@ -964,7 +975,8 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
                         sphereData.get(selectedSphere)[10] = value;
                         break;
                     case 8:
-                        sphereData.get(selectedSphere)[11] = value / 200.0 + 1;
+                        sphereData.get(selectedSphere)[11] = value / 200.0;
+                        System.out.println(sphereData.get(selectedSphere)[11]);
                         break;
                     default:
                         break;
