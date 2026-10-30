@@ -544,7 +544,7 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
                                 new double[] { rayPos[0], rayPos[1], rayPos[2] });
                         double[] finalColour = new double[3];
 
-                        double transition = onSelectedSphere ? (Math.sin(System.nanoTime() / 400000000.0) + 1) / 2 : 0;
+                        double transition = onSelectedSphere ? (Math.sin(System.nanoTime() / 400000000.0) + 1) / 6 : 0;
                         finalColour[0] = mix(renderColour[0], 1000, transition);
                         finalColour[1] = mix(renderColour[1], 1000, transition);
                         finalColour[2] = mix(renderColour[2], 1000, transition);
