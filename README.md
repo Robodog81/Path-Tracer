@@ -17,11 +17,12 @@ There is now a built in scene editor in the program, if you bring the mouse to t
 Some things that you should know:
 * Left/Right arrow keys to change the selected sphere, the one you select will flash white.
 * WASDQE to move the selected sphere in any direction.
+* UHJKYI to move the camera in any direction
 * The 'Material Property' slider in the sphere editor only applies to glass and metal.
   * On glass this changes the refractive index, how much the light bends.
   * On metal this changes the fuzziness, stops having an affect for any value above 1.0. 
 * All extra key binds are shown in the menus.
-* You can open the 'Extra Settings' menu to customize the sky brightness, the tone map type, and whether or not to show the red debug info.
+* You can open the 'Extra Settings' menu to customise the sky brightness, the tone map type, FOV, and whether or not to show the red debug info.
 
 If you want to go deeper:
 
@@ -46,6 +47,7 @@ You can see that the render here is simplifies and has no noise. This is an alte
 * Optional tone mapping
 * Comprehensive customizability and scene editor.
 * Alternative noiseless render for the editor preview.
+* Camera movement
 
 **How It Works:**
 Every pixel on the screen sends out a ray that bounces around and gathers information about the environment. When finished it will return a color that is an proximate of the final colour based on the direction it randomly bounced. The program repeats this for many layers, each one may bounce the ray in a different direction giving it more information of the scene. The image that is rendered is an average of every layer that was calculated. You can see the amount of layers in the top left corner along with other metrics such as FPS.
