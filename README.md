@@ -12,7 +12,19 @@ I have done most of the development of this program in VS Code but it was origin
 * Make sure you have a java JDK installed
 * Double click the file (on Windows) or run "java -jar PathTracer.jar" with the terminal in the location of the file (seems to work better for linux)
 
-**How to Customize**
+**How to Customize**\
+There is now a built in scene editor in the program, if you bring the mouse to the top of the window a menu appears allowing you to change the properties of all of the spheres. Most of it is self explanatory.\
+Some things that you should know:
+* Left/Right arrow keys to change the selected sphere, the one you select will flash white.
+* WASDQE to move the selected sphere in any direction.
+* The 'Material Property' slider in the sphere editor only applies to glass and metal.
+  * On glass this changes the refractive index, how much the light bends.
+  * On metal this changes the fuzziness, stops having an affect for any value above 1.0. 
+* All extra key binds are shown in the menus.
+* You can open the 'Extra Settings' menu to customize the sky brightness, the tone map type, and whether or not to show the red debug info.
+
+If you want to go deeper:
+
 * Download the source code
 * Extract the zip
 * Open the extracted folder in VS Code
@@ -21,8 +33,7 @@ I have done most of the development of this program in VS Code but it was origin
 
 At the top of the program there are a bunch of finals that effect the various parts of the render engine. You can play around with these to change performance and other aspects.
 
-**Editing The Scene:**
-If you scroll down a bit you will see a section with a bunch of addSphere() functions being called. You can change these or add more to edit the scene. Keep in mind that if you add more spheres you must change the SPHEREAMT final to match the new amount.
+![The menus & editor](Menu Demo.webp)
 
 **Features**
 * Multi Threading
@@ -31,9 +42,10 @@ If you scroll down a bit you will see a section with a bunch of addSphere() func
 * Performance metric display
 * Running average accumulation
 * Optional tone mapping
+* Comprehensive customizability and scene editor.
 
 **How It Works:**
- Every pixel on the screen sends out a ray that bounces around and gathers information about the environment. When finished it will return a color that is an proximate of the final colour. The program repeats this for many layers, each one may bounce the ray in a different direction giving it more information of the scene. The image that is rendered is an average of every layer that was calculated. You can see the amount of layers in the top left corner along with other metrics such as FPS.
+ Every pixel on the screen sends out a ray that bounces around and gathers information about the environment. When finished it will return a color that is an proximate of the final colour based on the direction it randomly bounced. The program repeats this for many layers, each one may bounce the ray in a different direction giving it more information of the scene. The image that is rendered is an average of every layer that was calculated. You can see the amount of layers in the top left corner along with other metrics such as FPS.
 
-For more information you can google it or look at the book that i constantly referenced to build this project:
+For more information you can google it or look at the book that I constantly referenced to build this project:
 https://raytracing.github.io/books/RayTracingInOneWeekend.html
