@@ -33,7 +33,9 @@ If you want to go deeper:
 
 At the top of the program there are a bunch of finals that effect the various parts of the render engine. You can play around with these to change performance and other aspects.
 
-![The menus & editor](Menu Demo.webp)
+**The Menus :)**
+![The menus & editor](Menu_Demo.webp)
+You can see that the render here is simplifies and has no noise. This is an alternate rendering method for when you are in edit mode. Note that fuzzy metals are unable to be previewed in this mode, you will need to check them in the render mode.
 
 **Features**
 * Multi Threading
@@ -43,9 +45,10 @@ At the top of the program there are a bunch of finals that effect the various pa
 * Running average accumulation
 * Optional tone mapping
 * Comprehensive customizability and scene editor.
+* Alternative noiseless render for the editor preview.
 
 **How It Works:**
- Every pixel on the screen sends out a ray that bounces around and gathers information about the environment. When finished it will return a color that is an proximate of the final colour based on the direction it randomly bounced. The program repeats this for many layers, each one may bounce the ray in a different direction giving it more information of the scene. The image that is rendered is an average of every layer that was calculated. You can see the amount of layers in the top left corner along with other metrics such as FPS.
+Every pixel on the screen sends out a ray that bounces around and gathers information about the environment. When finished it will return a color that is an proximate of the final colour based on the direction it randomly bounced. The program repeats this for many layers, each one may bounce the ray in a different direction giving it more information of the scene. The image that is rendered is an average of every layer that was calculated. You can see the amount of layers in the top left corner along with other metrics such as FPS.
 
 For more information you can google it or look at the book that I constantly referenced to build this project:
 https://raytracing.github.io/books/RayTracingInOneWeekend.html
