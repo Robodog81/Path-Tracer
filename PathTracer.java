@@ -24,6 +24,9 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
     JDialog settings = new JDialog();
     JDialog globalSettings = new JDialog();
 
+    // values that can be changed to effect the look of the render, most can be
+    // changed in the editor
+    // ------------------------------------------------------------------------------------------------------
     final int BOARDWIDTH = 1920 / 4;
     final int BOARDHEIGHT = 1080 / 4;
     final int CELLSIZE = 1;
@@ -31,23 +34,24 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
     final int THREADAMT = Runtime.getRuntime().availableProcessors(); // the amount of available threads
     final int MAXBOUNCES = 50;
     final double AIRRI = 1; // index of refraction of air
-    int toneMapType = 2; // only not a final because vs code hilights the alternative map as unused code
+    int toneMapType = 2;
     boolean previewRender = true;
     int skyBrightness = 150;
     boolean debugInfo = true;
 
-    double[][][] frameBuffer = new double[BOARDWIDTH][BOARDHEIGHT][3];
-
-    List<double[]> sphereData = new ArrayList<double[]>();
-    // x, y, z, radius, r, g, b, emition r g b, material, extra property (12 wide)
-
+    double fOV = 150;
     int camX = 0;
     int camY = -90;
     int camZ = -250;
+    // ------------------------------------------------------------------------------------------------------
+
+    double[][][] frameBuffer = new double[BOARDWIDTH][BOARDHEIGHT][3]; // 3 wide because of rgb storage
+
+    List<double[]> sphereData = new ArrayList<double[]>();
+    // x, y, z, radius, r, g, b, emition r g b, material, extra property (used as 12
+    // wide)
 
     int selectedSphere = 0;
-
-    double fOV = 150;
 
     int frameNumber = 1;
 
@@ -57,7 +61,7 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
 
     boolean painting = false;
 
-    int[] pressedKeys = new int[6];
+    int[] pressedKeys = new int[12];
 
     final double startTime = System.nanoTime();
 
@@ -73,6 +77,7 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
+        // set up the menus
         JMenu optionsMenu = new JMenu("Options");
 
         JMenuItem renderItem = new JMenuItem("Toggle Render Mode");
@@ -106,6 +111,7 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
         addMouseListener(this);
         addMouseMotionListener(this);
 
+        // add a default scene
         addSphere(0, 5000, 0, 5000, 1, 1, 1, 0, 0, 0, 1, 0);
         addSphere(0, 0, 0, 20, 0.4, 1, 0.5, 0, 0, 0, 1, 0);
         addSphere(-60, -30, 40, 25, 0, 0, 0, 255, 255, 255, 1, 0);
@@ -119,6 +125,8 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
         addSphere(-70, -30, -35, 30, 1, 1, 1, 0, 0, 0, 3, 1.5);
         addSphere(0, -5, -45, 5, 1, 1, 1, 0, 0, 0, 3, 1.5);
 
+        // these are alternative test scenes, try them out if you want, you may need to
+        // chanege the fov to get them in frame
         /*
          * addSphere(0, 100000000, 0, 100000000, 1, 1, 1, 0, 0, 0, 1, 0);
          * addSphere(0, -130, 0, 60, 1, 1, 1, 0, 0, 0, 3, 1.5);
@@ -230,6 +238,7 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
     }
 
     public void actionPerformed(ActionEvent e) {
+        // when a menu item is clicked run its intended action
         switch (e.getActionCommand()) {
             case "Toggle Render Mode":
                 previewRender = !previewRender;
@@ -348,8 +357,11 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
 
     public void tickLoop() {
         while (true) {
-            if (previewRender)
-                editSpheres();
+            if (previewRender) {
+                moveSpheres();
+                moveCamera();
+                reset(true);
+            }
 
             List<Callable<Void>> threadTasks = new ArrayList<>();
 
@@ -385,7 +397,7 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
         }
     }
 
-    public void editSpheres() {
+    public void moveSpheres() {
         if (sphereData.size() > 0) {
             double[] currentSphere = sphereData.get(selectedSphere);
 
@@ -394,10 +406,15 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
             currentSphere[1] += (pressedKeys[4] - pressedKeys[5]) * 2;
             currentSphere[2] += (pressedKeys[0] - pressedKeys[2]) * 2;
 
-            reset(true);
-
             sphereData.set(selectedSphere, currentSphere);
         }
+    }
+
+    public void moveCamera() {
+        // move the selected sphere using the current pressed keys
+        camX += (pressedKeys[9] - pressedKeys[7]) * 2;
+        camY += (pressedKeys[10] - pressedKeys[11]) * 2;
+        camZ += (pressedKeys[6] - pressedKeys[8]) * 2;
     }
 
     public void renderChunk(int startArea) {
@@ -522,7 +539,6 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
 
         boolean onSelectedSphere = false;
         for (int i = 0; i < 5; i++) {
-
             nextRay = sendIndividualRay(rayPos[0], rayPos[1], rayPos[2],
                     rayDir[0], rayDir[1], rayDir[2]);
             if (i == 0 && nextRay[4] == selectedSphere) {
@@ -536,6 +552,7 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
 
                 switch ((int) sphereData.get((int) nextRay[4])[10]) {
                     case 1:
+                        // approximation of how much light would reach the matte sphere
                         double[] sphereColour = new double[] { sphereData.get((int) nextRay[4])[4] * colourModifier[0],
                                 sphereData.get((int) nextRay[4])[5] * colourModifier[1],
                                 sphereData.get((int) nextRay[4])[6] * colourModifier[2] };
@@ -552,6 +569,8 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
                         return finalColour;
 
                     case 2:
+                        // metal surface, ignore fuzz
+                        // tint the colour of the ray.
                         colourModifier[0] *= sphereData.get((int) nextRay[4])[4];
                         colourModifier[1] *= sphereData.get((int) nextRay[4])[5];
                         colourModifier[2] *= sphereData.get((int) nextRay[4])[6];
@@ -559,6 +578,8 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
                                 (int) nextRay[4]);
                         break;
                     case 3:
+                        // fully refract unless there is total internal reflection
+                        // prevents noise from lack of accumulation
                         rayDir = glassMaterial(new double[] { nextRay[1], nextRay[2], nextRay[3] }, rayDir,
                                 (int) nextRay[5], (int) nextRay[4]);
                         break;
@@ -566,12 +587,15 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
                         System.out.println("No Sphere Material Found!");
                 }
             } else {
+                // if the ray missed the spheres
                 double[] skyColour = getBackGround(rayDir[1]);
                 skyColour[0] *= colourModifier[0];
                 skyColour[1] *= colourModifier[1];
                 skyColour[2] *= colourModifier[2];
 
-                double transition = onSelectedSphere ? (Math.sin(System.nanoTime() / 400000000.0) + 1) / 2 : 0;
+                // still fade to white if on the selected sphere, otherwise any visible sky on a
+                // reflection of a selected sphere would be colourd normaly
+                double transition = onSelectedSphere ? (Math.sin(System.nanoTime() / 400000000.0) + 1) / 6 : 0;
 
                 double[] finalColour = new double[3];
                 finalColour[0] = mix(skyColour[0], 1000, transition);
@@ -581,13 +605,16 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
                 return finalColour;
             }
         }
+        // if all of the bounces are used up - ray has bounced more than 5 times
+        // return the sphere colour rather than bouncing again, still blend with the
+        // selected sphere highlight
         double[] sphereColour = new double[] { sphereData.get((int) nextRay[4])[4],
                 sphereData.get((int) nextRay[4])[5],
                 sphereData.get((int) nextRay[4])[6] };
         double[] sphereNormal = new double[] { nextRay[1], nextRay[2], nextRay[3] };
         double[] renderColour = quickDefuseMaterial(sphereNormal, sphereColour,
                 new double[] { rayPos[0], rayPos[1], rayPos[2] });
-        double transition = onSelectedSphere ? (Math.sin(System.nanoTime() / 400000000.0) + 1) / 2 : 0;
+        double transition = onSelectedSphere ? (Math.sin(System.nanoTime() / 400000000.0) + 1) / 6 : 0;
 
         double[] finalColour = new double[3];
         finalColour[0] = mix(renderColour[0], 1000, transition);
@@ -667,6 +694,7 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
     }
 
     public double[] glassMaterial(double[] surfaceNormal, double[] rayDir, int internalBounce, int collisionIndex) {
+        // invert the normal to face towards the ray
         if (internalBounce == 1)
             surfaceNormal = new double[] { -surfaceNormal[0], -surfaceNormal[1], -surfaceNormal[2] };
 
@@ -691,42 +719,52 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
     public double[] metalMaterial(double[] surfaceNormal, double[] rayDir, int collisionIndex) {
         double fuzziness = sphereData.get(collisionIndex)[11];
 
+        // get the direction the ray will reflect
         double[] reflectDir = reflect(rayDir, surfaceNormal);
 
         double[] newDir = reflectDir;
 
-        if (fuzziness > 0) {
-            boolean continueLoop = true;
-            while (continueLoop) {
-                double[] randVec = new double[3];
-                if (!previewRender)
-                    randVec = randomBounceVector();
+        // if there is fuzzieness to the metal repeat getting random fuzz vectors
+        // based on the reflection untill one doesn't face in towards the surface
+        // won't run in preview as fuzz needs accumulation
+        if (!previewRender) {
+            if (fuzziness > 0) {
+                boolean continueLoop = true;
+                while (continueLoop) {
+                    double[] randVec = randomBounceVector();
 
-                newDir = reflectDir;
+                    // reset the direction to the true reflection
+                    newDir = reflectDir;
 
-                newDir[0] += randVec[0] * fuzziness;
-                newDir[1] += randVec[1] * fuzziness;
-                newDir[2] += randVec[2] * fuzziness;
+                    // add the random vector to the reflection vector
+                    // the random vector has a radius of the fuzziness value
+                    newDir[0] += randVec[0] * fuzziness;
+                    newDir[1] += randVec[1] * fuzziness;
+                    newDir[2] += randVec[2] * fuzziness;
 
-                // normalise
-                double normalLength = Math.sqrt((newDir[0] * newDir[0]) + (newDir[1] * newDir[1])
-                        + (newDir[2] * newDir[2]));
-                newDir[0] /= normalLength;
-                newDir[1] /= normalLength;
-                newDir[2] /= normalLength;
+                    // normalise
+                    double normalLength = Math.sqrt((newDir[0] * newDir[0]) + (newDir[1] * newDir[1])
+                            + (newDir[2] * newDir[2]));
+                    newDir[0] /= normalLength;
+                    newDir[1] /= normalLength;
+                    newDir[2] /= normalLength;
 
-                if (dot(newDir, surfaceNormal) > 0) {
-                    continueLoop = false;
+                    if (dot(newDir, surfaceNormal) > 0) {
+                        // if a good direction is found, stop the loop
+                        continueLoop = false;
+                    }
                 }
+            } else {
+                // if there is no fuzz just reflect the ray
+                newDir = reflectDir;
             }
-        } else {
-            // if there is no fuzz just reflect the ray
-            newDir = reflectDir;
         }
         return newDir;
     }
 
     public double[] reflect(double[] uv, double[] normal) {
+        // takes in the ray dir (uv) and the surface normal and generates a new
+        // reflection vector
         double[] reflect = new double[3];
         double dot = dot(uv, normal);
         reflect[0] = uv[0] - 2 * dot * normal[0];
@@ -736,12 +774,17 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
     }
 
     public double reflectance(double cosine, double refractionIndex) {
+        // used for glass, aproximate how much light will be reflected based on
+        // how shallow the angle between the surface is. uses Schlick Approximation
         double r0 = (1 - refractionIndex) / (1 + refractionIndex);
         r0 *= r0; // square the value
         return r0 + (1 - r0) * Math.pow((1 - cosine), 5);
     }
 
     public double[] refract(double[] uv, double[] normal, double etaiOverEtat) {
+        // used by the glass material, generate a reflection vector based on the
+        // ray dir (uv), the normal, and the combined reflective indexes -
+        // one devided by the other depending on if the ray is entering or leaving
         double cosTheta = dot(new double[] { -uv[0], -uv[1], -uv[2] }, normal);
         if (cosTheta > 1)
             cosTheta = 1; // prevent it from going over 1
@@ -839,14 +882,17 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
     }
 
     public double max(double a, double b) {
+        // simple function, returns the heighest of 2 values
         return a > b ? a : b;
     }
 
     public double dot(double[] a, double[] b) {
+        // take the dot product of 2 vectors
         return (a[0] * b[0]) + (a[1] * b[1]) + (a[2] * b[2]);
     }
 
     public double clamp(double input, double min, double max) {
+        // clamp a given value between an upper and lower bound
         double result = input;
         if (result < min)
             result = min;
@@ -856,6 +902,10 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
     }
 
     public double[] randomBounceVector() {
+        // generate a random direction within a sphere, if the value will fall
+        // outside of the sphere (normal length > 1, this happens on the edges
+        // of the cube the random numbers are generated in - each value is -1 - 1)
+        // try again
         while (true) {
             double randX = (double) (ThreadLocalRandom.current().nextDouble() * 2) - 1;
             double randY = (double) (ThreadLocalRandom.current().nextDouble() * 2) - 1;
@@ -880,6 +930,7 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
     }
 
     public void settingsPopup() { // slider layout based on a google ai overveiw example
+        // for editing the selected spheres properties
         settings = new JDialog();
 
         settings.setLayout(new BorderLayout());
@@ -1003,6 +1054,7 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
     }
 
     public void globalSettingsPopup() { // slider layout based on a google ai overveiw example
+        // for editing general things like tonemap or sky
         globalSettings = new JDialog();
         globalSettings.setLayout(new BorderLayout());
         globalSettings.setResizable(false);
@@ -1018,13 +1070,15 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
 
         JLabel skyBrightnessLabel = new JLabel("Sky Brightness: " + skyBrightness, JLabel.CENTER);
         JLabel toneMapLabel = new JLabel("Tone-Mapp Type: " + toneMapType, JLabel.CENTER);
+        JLabel fovLabel = new JLabel("Field of View: " + fOV, JLabel.CENTER);
 
         JSlider s1 = new JSlider(0, 1000, (int) max(skyBrightness * 4, 255));
         JSlider s2 = new JSlider(1, 3, (int) toneMapType);
+        JSlider s3 = new JSlider(1, 1000, (int) fOV);
 
-        JLabel[] labels = { skyBrightnessLabel, toneMapLabel };
-        JSlider[] sliders = { s1, s2 };
-        String[] titles = { "Sky Brightness: ", "Tone-Mapp Type: " };
+        JLabel[] labels = { skyBrightnessLabel, toneMapLabel, fovLabel };
+        JSlider[] sliders = { s1, s2, s3 };
+        String[] titles = { "Sky Brightness: ", "Tone-Mapp Type: ", "Field of View: " };
 
         JCheckBox debugBox = new JCheckBox("Debug Information", true);
 
@@ -1058,6 +1112,9 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
                     case 1:
                         toneMapType = value;
                         break;
+                    case 2:
+                        fOV = value;
+                        break;
                     default:
                         break;
                 }
@@ -1087,6 +1144,7 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
         globalSettings.setVisible(true);
     }
 
+    // lots of these functions ore required to prevent errors but aren't used
     public void mouseExited(MouseEvent e) {
     }
 
@@ -1103,6 +1161,7 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
     }
 
     public void mouseMoved(MouseEvent e) {
+        // show or hide the menu bar
         int mouseY = e.getY();
         if (mouseY < 60) {
             menuBar.setPreferredSize(new Dimension(0, 24));
@@ -1118,38 +1177,75 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
     }
 
     public void keyPressed(KeyEvent e) {
+        // fill an array with values each representing a key to move the sphere and the
+        // keys to move the camera
+        // WASDQE and UHJKYI
         int key = e.getKeyCode();
         switch (key) {
             case 87:
+                // W
                 pressedKeys[0] = 1;
                 break;
             case 65:
+                // A
                 pressedKeys[1] = 1;
                 break;
             case 83:
+                // S
                 pressedKeys[2] = 1;
                 break;
             case 68:
+                // D
                 pressedKeys[3] = 1;
                 break;
             case 81:
+                // Q
                 pressedKeys[4] = 1;
                 break;
             case 69:
+                // E
                 pressedKeys[5] = 1;
                 break;
+            case 85:
+                // U
+                pressedKeys[6] = 1;
+                break;
+            case 72:
+                // H
+                pressedKeys[7] = 1;
+                break;
+            case 74:
+                // K
+                pressedKeys[8] = 1;
+                break;
+            case 75:
+                // K
+                pressedKeys[9] = 1;
+                break;
+            case 89:
+                // Y
+                pressedKeys[10] = 1;
+                break;
+            case 73:
+                // I
+                pressedKeys[11] = 1;
+                break;
             case 37:
+                // change the selected sphere when left arrow pressed
                 if (selectedSphere > 0) {
                     selectedSphere--;
                     if (settings.isVisible()) {
+                        // relaunch settings for the new selected sphere
                         launchSettings();
                     }
                 }
                 break;
             case 39:
+                // change the selected sphere when right arrow pressed
                 if (selectedSphere < sphereData.size() - 1) {
                     selectedSphere++;
                     if (settings.isVisible()) {
+                        // relaunch settings for the new selected sphere
                         launchSettings();
                     }
                 }
@@ -1160,6 +1256,7 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
     }
 
     public void keyReleased(KeyEvent e) {
+        // register when a key is released, uses the same array as keyPressed()
         int key = e.getKeyCode();
         switch (key) {
             case 87:
@@ -1179,6 +1276,24 @@ public class PathTracer extends JFrame implements MouseListener, MouseMotionList
                 break;
             case 69:
                 pressedKeys[5] = 0;
+                break;
+            case 85:
+                pressedKeys[6] = 0;
+                break;
+            case 72:
+                pressedKeys[7] = 0;
+                break;
+            case 74:
+                pressedKeys[8] = 0;
+                break;
+            case 75:
+                pressedKeys[9] = 0;
+                break;
+            case 89:
+                pressedKeys[10] = 0;
+                break;
+            case 73:
+                pressedKeys[11] = 0;
                 break;
             default:
                 break;
